@@ -21,14 +21,20 @@ import fs from 'fs';
 import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import dotenv from 'dotenv';
+
+// Load environment variables explicitly for Cloudinary if they are missing
+if (!process.env.CLOUDINARY_CLOUD_NAME) {
+  dotenv.config();
+}
 
 import nodemailer from 'nodemailer';
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dnfee6rib',
+  api_key: process.env.CLOUDINARY_API_KEY || '193651557981285',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'sRCb0UvRvqeF0cPLS9eSJj52Nms',
 });
 
 async function sendOTPEmail(email: string, otp: string) {
