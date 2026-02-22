@@ -76,10 +76,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   log("✅ Connected to MongoDB successfully");
 
   // Endpoint for Cloudinary image upload
-  app.post("/api/admin/upload-image", authenticateAdmin, cloudinaryUpload.single('image'), async (req: any, res) => {
+  app.post("/api/admin/upload-image", authenticateAdmin, (req: any, res, next) => {
+    console.log("📸 Incoming upload request to /api/admin/upload-image");
+    console.log("🔑 Auth Admin:", req.admin?.username);
+    cloudinaryUpload.single('image')(req, res, (err) => {
+      if (err) {
+        console.error("❌ Multer/Cloudinary middleware error:", err);
+        return res.status(500).json({ 
+          message: "Middleware upload failed", 
+          error: err.message,
+          stack: err.stack 
+        });
+      }
+      next();
+    });
+  }, async (req: any, res) => {
     try {
-      console.log("📸 Image upload request received");
-      console.log("📁 File info:", req.file ? {
+      console.log("📁 File processed by middleware:", req.file ? {
         originalname: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size,
@@ -87,24 +100,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } : "No file");
       
       if (!req.file) {
-        console.error("❌ No file found in request");
+        console.error("❌ No file found in request after middleware");
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      // req.file.path contains the Cloudinary URL when using multer-storage-cloudinary
-      console.log("✅ Image uploaded to Cloudinary successfully:", req.file.path);
+      console.log("✅ Image upload successful:", req.file.path);
       res.json({ 
         url: req.file.path,
         success: true 
       });
     } catch (error: any) {
-      console.error("❌ Cloudinary upload error details:", {
-        message: error.message,
-        stack: error.stack,
-        cloudinaryError: error.cloudinaryError || error
-      });
+      console.error("❌ Controller upload error:", error);
       res.status(500).json({ 
-        message: "Failed to upload image to Cloudinary",
+        message: "Failed to process uploaded image",
         error: error.message 
       });
     }
