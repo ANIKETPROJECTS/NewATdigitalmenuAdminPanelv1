@@ -101,8 +101,7 @@
     - Workflow restarted and verified running on port 5000
     - MongoDB connected successfully
     - All progress tracker items marked as done
-[x] 51. Re-installed cross-env package after session restart (Feb 22, 2026)
-    - cross-env package restored
-    - Workflow restarted and verified running on port 5000
-    - MongoDB connected successfully
-    - All progress tracker items marked as done
+[x] 51. Enhanced Cloudinary upload logging for VPS debugging (Feb 22, 2026)
+    - Added detailed error capturing (code, http_code, stack) to upload endpoint
+    - Added environment variable presence check in logs
+    - Restarted workflow and verified server status

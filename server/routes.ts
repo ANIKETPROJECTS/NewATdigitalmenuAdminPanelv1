@@ -82,10 +82,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     cloudinaryUpload.single('image')(req, res, (err) => {
       if (err) {
         console.error("❌ Multer/Cloudinary middleware error:", err);
+        console.log("☁️ Cloudinary Config Check:", {
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? "Present" : "Missing",
+          api_key: process.env.CLOUDINARY_API_KEY ? "Present" : "Missing",
+          api_secret: process.env.CLOUDINARY_API_SECRET ? "Present" : "Missing"
+        });
         return res.status(500).json({ 
           message: "Middleware upload failed", 
           error: err.message,
-          stack: err.stack 
+          stack: err.stack,
+          code: (err as any).code,
+          http_code: (err as any).http_code
         });
       }
       next();
