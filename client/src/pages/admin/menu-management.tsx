@@ -349,8 +349,8 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
         
         if (response.ok) {
           const result = await response.json();
-          // Store the base64 string directly in the image field
-          finalFormData.image = result.base64;
+          // Store the Cloudinary URL directly in the image field
+          finalFormData.image = result.url;
         } else {
           throw new Error('Image upload failed');
         }
@@ -381,11 +381,11 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
       const isValidImage = file.type.startsWith('image/');
       const isValidRawFormat = validRawFormats.some(ext => fileName.endsWith(ext));
       
-      const MAX_FILE_SIZE = 200 * 1024; // 200KB limit
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit (Cloudinary handles larger files)
       if (file.size > MAX_FILE_SIZE) {
         toast({
           title: "Error",
-          description: "Image size must be less than 200KB. Please compress your image or select a smaller one.",
+          description: "Image size must be less than 10MB.",
           variant: "destructive",
         });
         return;

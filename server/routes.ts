@@ -19,63 +19,52 @@ import XLSX from 'xlsx';
 import path from 'path';
 import fs from 'fs';
 import mongoose from 'mongoose';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 import nodemailer from 'nodemailer';
 
-let transporter: nodemailer.Transporter | null = null;
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-function createTransporter() {
-  const emailUser = process.env.EMAIL_USER?.trim();
-  const emailPass = process.env.EMAIL_PASS?.trim();
-  
-  if (!emailUser || !emailPass) {
-    throw new Error(`Missing email credentials. EMAIL_USER: ${emailUser ? 'set' : 'missing'}, EMAIL_PASS: ${emailPass ? 'set' : 'missing'}`);
-  }
-  
-  console.log(`📧 Initializing email transporter for: ${emailUser}`);
-  
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: emailUser,
-      pass: emailPass,
-    },
-  });
-}
+// Configure Cloudinary storage for multer
+const cloudinaryStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'menu-items',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+  } as any,
+});
 
-async function sendOTPEmail(email: string, otp: string) {
-  try {
-    if (!transporter) {
-      transporter = createTransporter();
-    }
-    
-    const emailUser = process.env.EMAIL_USER?.trim();
-    if (!emailUser) {
-      throw new Error('EMAIL_USER environment variable is not set');
-    }
-    
-    const mailOptions = {
-      from: emailUser,
-      to: email,
-      subject: 'Your Login OTP',
-      text: `Your One-Time Password for login is: ${otp}. It will expire in 10 minutes.`,
-      html: `<p>Your One-Time Password for login is: <strong>${otp}</strong>.</p><p>It will expire in 10 minutes.</p>`,
-    };
-    
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ OTP email sent successfully to: ${email}`);
-  } catch (error) {
-    console.error(`❌ Failed to send OTP email: ${error instanceof Error ? error.message : error}`);
-    throw error;
-  }
-}
+const cloudinaryUpload = multer({ storage: cloudinaryStorage });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Connect to MongoDB
   log("🔌 Attempting to connect to MongoDB...");
   await connectToDatabase();
   log("✅ Connected to MongoDB successfully");
-  // Customer-facing routes removed - Admin-only system
+
+  // Endpoint for Cloudinary image upload
+  app.post("/api/admin/upload-image", authenticateAdmin, cloudinaryUpload.single('image'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // req.file.path contains the Cloudinary URL when using multer-storage-cloudinary
+      res.json({ 
+        url: req.file.path,
+        success: true 
+      });
+    } catch (error: any) {
+      console.error("Cloudinary upload error:", error);
+      res.status(500).json({ message: "Failed to upload image to Cloudinary" });
+    }
+  });
 
   // Configure multer for file uploads - no size limit
   const upload = multer({ 

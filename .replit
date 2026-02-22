@@ -46,3 +46,6 @@ expertMode = true
 [userenv.shared]
 EMAIL_USER = "raneaniket23@gmail.com"
 EMAIL_PASS = "wirurvuovthjxogh"
+CLOUDINARY_API_SECRET = "sRCb0UvRvqeF0cPLS9eSJj52Nms"
+CLOUDINARY_API_KEY = "193651557981285"
+CLOUDINARY_CLOUD_NAME = "dnfee6rib"
