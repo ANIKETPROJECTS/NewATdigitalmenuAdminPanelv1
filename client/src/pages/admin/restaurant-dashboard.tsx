@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -250,6 +250,168 @@ function OverviewSection({ rid }: { rid: string }) {
   );
 }
 
+// ─── Cascading Category Dropdown ─────────────────────────────────────────────
+function CascadingCategoryDropdown({
+  value,
+  onChange,
+  categories,
+  collections,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  categories: any[];
+  collections: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [hoveredParent, setHoveredParent] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setHoveredParent(null);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Build a set of subcategory ids that are covered by the tree
+  const treeSubIds = new Set(
+    categories.flatMap((c: any) => (c.subcategories || []).map((s: any) => s.id))
+  );
+
+  // Collections not covered by any category tree — show them flat at bottom
+  const orphanCollections = collections.filter(col => !treeSubIds.has(col));
+
+  // Derive label for current selection
+  const selectedLabel =
+    value === "all"
+      ? "All Categories"
+      : categories
+          .flatMap((c: any) => c.subcategories || [])
+          .find((s: any) => s.id === value)?.title ||
+        formatCategory(value);
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <button
+        onClick={() => { setOpen(o => !o); setHoveredParent(null); }}
+        className="flex items-center gap-2 h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors min-w-[160px] justify-between"
+        data-testid="button-category-dropdown"
+      >
+        <span className="truncate max-w-[120px]">{selectedLabel}</span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[200] py-1.5 min-w-[200px]">
+          {/* All Categories */}
+          <button
+            onClick={() => { onChange("all"); setOpen(false); }}
+            className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
+              value === "all" ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5 opacity-60" />
+            All Categories
+          </button>
+
+          {categories.length > 0 && <div className="mx-3 my-1 border-t border-gray-100" />}
+
+          {/* Parent categories with flyout */}
+          {categories.map((cat: any) => {
+            const subs = cat.subcategories || [];
+            const isHovered = hoveredParent === String(cat._id);
+            return (
+              <div
+                key={String(cat._id)}
+                className="relative"
+                onMouseEnter={() => setHoveredParent(String(cat._id))}
+                onMouseLeave={() => setHoveredParent(null)}
+              >
+                <button
+                  onClick={() => {
+                    if (subs.length === 0) {
+                      onChange(cat.title.toLowerCase().replace(/\s+/g, "-"));
+                      setOpen(false);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 px-4 py-2 text-sm transition-colors ${
+                    isHovered ? "bg-amber-50 text-amber-700" : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {cat.image && (
+                      <img src={cat.image} alt="" className="w-4 h-4 rounded object-cover opacity-70" onError={e => { (e.target as any).style.display = "none"; }} />
+                    )}
+                    <span className="font-medium">{cat.title}</span>
+                    {subs.length > 0 && (
+                      <span className="text-xs text-gray-400 font-normal">({subs.length})</span>
+                    )}
+                  </div>
+                  {subs.length > 0 && (
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                  )}
+                </button>
+
+                {/* Sub-panel flyout */}
+                {isHovered && subs.length > 0 && (
+                  <div
+                    className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] py-1.5 min-w-[180px]"
+                    onMouseEnter={() => setHoveredParent(String(cat._id))}
+                  >
+                    <p className="px-4 pt-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">{cat.title}</p>
+                    <div className="mx-3 mb-1 border-t border-gray-100" />
+                    {subs.map((sub: any) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => { onChange(sub.id); setOpen(false); setHoveredParent(null); }}
+                        className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                          value === sub.id
+                            ? "bg-amber-50 text-amber-700 font-semibold"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sub.visible ? "bg-emerald-400" : "bg-gray-300"}`} />
+                        {sub.title}
+                        {value === sub.id && <span className="ml-auto text-amber-500">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Orphan collections (not in any category tree) */}
+          {orphanCollections.length > 0 && (
+            <>
+              <div className="mx-3 my-1 border-t border-gray-100" />
+              <p className="px-4 pt-1 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wider">Other</p>
+              {orphanCollections.map(col => (
+                <button
+                  key={col}
+                  onClick={() => { onChange(col); setOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
+                    value === col ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <UtensilsCrossed className="w-3.5 h-3.5 opacity-40" />
+                  {formatCategory(col)}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Menu Items
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -269,6 +431,11 @@ function MenuItemsSection({ rid }: { rid: string }) {
   const { data: collections = [] } = useQuery<string[]>({
     queryKey: [api(rid, "menu-collections")],
     queryFn: () => apiRequest(api(rid, "menu-collections")),
+  });
+
+  const { data: categoryTree = [] } = useQuery<any[]>({
+    queryKey: [api(rid, "categories")],
+    queryFn: () => apiRequest(api(rid, "categories")),
   });
 
   const params = new URLSearchParams();
@@ -419,13 +586,12 @@ function MenuItemsSection({ rid }: { rid: string }) {
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
           <Input className="pl-9 bg-gray-50 border-gray-200 rounded-xl" placeholder="Search items…" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-menu" />
         </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-44 bg-gray-50 border-gray-200 rounded-xl"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {collections.map(c => <SelectItem key={c} value={c}>{formatCategory(c)}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <CascadingCategoryDropdown
+          value={category}
+          onChange={setCategory}
+          categories={categoryTree}
+          collections={collections}
+        />
         <Select value={filterVeg} onValueChange={v => setFilterVeg(v as any)}>
           <SelectTrigger className="w-36 bg-gray-50 border-gray-200 rounded-xl"><SelectValue /></SelectTrigger>
           <SelectContent>
