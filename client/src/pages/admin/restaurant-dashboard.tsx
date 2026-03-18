@@ -686,10 +686,6 @@ function MenuItemsSection({ rid }: { rid: string }) {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-5 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-          <Input className="pl-9 bg-gray-50 border-gray-200 rounded-xl" placeholder="Search items…" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-menu" />
-        </div>
         <CascadingCategoryDropdown
           value={category}
           onChange={setCategory}
@@ -712,6 +708,10 @@ function MenuItemsSection({ rid }: { rid: string }) {
             <SelectItem value="false">Unavailable</SelectItem>
           </SelectContent>
         </Select>
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+          <Input className="pl-9 bg-gray-50 border-gray-200 rounded-xl" placeholder="Search items…" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-menu" />
+        </div>
       </div>
 
       {isLoading ? <LoadRow /> : (
