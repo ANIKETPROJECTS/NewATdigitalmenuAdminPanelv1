@@ -25,7 +25,7 @@ import {
   ArrowLeft, Menu, X, ChevronRight, ChevronDown, ChevronUp, Leaf, Star,
   Download, Search, Plus, Edit, Trash2, RefreshCw, Eye, EyeOff, Save,
   Phone, Mail, Globe, MapPin, Instagram, Facebook, Youtube, Upload, Link,
-  TrendingUp, Activity, Zap, Award,
+  TrendingUp, Activity, Zap, Award, List,
 } from "lucide-react";
 
 // ─── API base ─────────────────────────────────────────────────────────────────
@@ -262,6 +262,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
   const [editItem, setEditItem] = useState<any>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const emptyForm = { name: "", description: "", price: "", category: "", isVeg: true, image: "", isAvailable: true, todaysSpecial: false, chefSpecial: false, preparationTime: "", allergens: "", ingredients: "" };
   const [form, setForm] = useState(emptyForm);
 
@@ -379,9 +380,38 @@ function MenuItemsSection({ rid }: { rid: string }) {
     <div>
       <div className="flex items-center justify-between mb-7">
         <SectionTitle subtitle={`${items.length} items found`}>Menu Items</SectionTitle>
-        <Button onClick={() => { setForm(emptyForm); setAddOpen(true); }} className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-sm" data-testid="button-add-menu-item">
-          <Plus className="w-4 h-4 mr-2" />Add Item
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Grid / List toggle */}
+          <div className="flex items-center bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                viewMode === "list"
+                  ? "bg-amber-500 text-white shadow-sm"
+                  : "text-gray-400 hover:text-gray-700"
+              }`}
+              data-testid="button-view-list"
+            >
+              <List className="w-4 h-4" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                viewMode === "grid"
+                  ? "bg-amber-500 text-white shadow-sm"
+                  : "text-gray-400 hover:text-gray-700"
+              }`}
+              data-testid="button-view-grid"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="hidden sm:inline">Grid</span>
+            </button>
+          </div>
+          <Button onClick={() => { setForm(emptyForm); setAddOpen(true); }} className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-sm" data-testid="button-add-menu-item">
+            <Plus className="w-4 h-4 mr-2" />Add Item
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-5 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -422,33 +452,102 @@ function MenuItemsSection({ rid }: { rid: string }) {
               <p className="text-gray-400 font-medium">No menu items found</p>
             </div>
           )}
-          <div className="space-y-3">
-            {items.map((item: any) => (
-              <div key={String(item._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-4 flex items-center gap-4" data-testid={`row-menu-item-${item._id}`}>
-                {item.image
-                  ? <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-gray-100" onError={e => { (e.target as any).style.display = "none"; }} />
-                  : <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0"><UtensilsCrossed className="w-6 h-6 text-gray-300" /></div>}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-900">{item.name}</p>
-                    <VegBadge isVeg={item.isVeg} />
-                    {item.todaysSpecial && <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Today's Special</Badge>}
-                    {item.chefSpecial && <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs"><Star className="w-3 h-3 mr-1" />Chef's</Badge>}
+
+          {/* ── LIST VIEW ── */}
+          {viewMode === "list" && (
+            <div className="space-y-3">
+              {items.map((item: any) => (
+                <div key={String(item._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-4 flex items-center gap-4" data-testid={`row-menu-item-${item._id}`}>
+                  {item.image
+                    ? <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-gray-100" onError={e => { (e.target as any).style.display = "none"; }} />
+                    : <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0"><UtensilsCrossed className="w-6 h-6 text-gray-300" /></div>}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-gray-900">{item.name}</p>
+                      <VegBadge isVeg={item.isVeg} />
+                      {item.todaysSpecial && <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Today's Special</Badge>}
+                      {item.chefSpecial && <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs"><Star className="w-3 h-3 mr-1" />Chef's</Badge>}
+                    </div>
+                    <p className="text-sm text-gray-500 truncate">{item.description}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm font-bold text-amber-600">{item.price ? `₹${item.price}` : "—"}</span>
+                      <Badge variant="outline" className="text-xs text-gray-500">{formatCategory(item.category || "")}</Badge>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{item.description}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-sm font-bold text-amber-600">{item.price ? `₹${item.price}` : "—"}</span>
-                    <Badge variant="outline" className="text-xs text-gray-500">{formatCategory(item.category || "")}</Badge>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Switch checked={item.isAvailable} onCheckedChange={v => toggleMutation.mutate({ id: String(item._id), col: item.category, patch: { isAvailable: v } })} data-testid={`switch-available-${item._id}`} />
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-amber-50 hover:text-amber-600 rounded-lg" onClick={() => openEdit(item)} data-testid={`button-edit-menu-${item._id}`}><Edit className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-500 rounded-lg" onClick={() => setDeleteConfirm(item)} data-testid={`button-delete-menu-${item._id}`}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Switch checked={item.isAvailable} onCheckedChange={v => toggleMutation.mutate({ id: String(item._id), col: item.category, patch: { isAvailable: v } })} data-testid={`switch-available-${item._id}`} />
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 rounded-lg" onClick={() => openEdit(item)} data-testid={`button-edit-menu-${item._id}`}><Edit className="w-4 h-4" /></Button>
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-500 rounded-lg" onClick={() => setDeleteConfirm(item)} data-testid={`button-delete-menu-${item._id}`}><Trash2 className="w-4 h-4" /></Button>
+              ))}
+            </div>
+          )}
+
+          {/* ── GRID VIEW ── */}
+          {viewMode === "grid" && (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {items.map((item: any) => (
+                <div key={String(item._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group" data-testid={`card-menu-item-${item._id}`}>
+                  {/* Image */}
+                  <div className="relative h-40 bg-gray-100 overflow-hidden">
+                    {item.image
+                      ? <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { (e.target as any).style.display = "none"; }} />
+                      : <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-10 h-10 text-gray-200" /></div>}
+                    {/* Availability toggle overlay */}
+                    <div className="absolute top-2 right-2">
+                      <Switch
+                        checked={item.isAvailable}
+                        onCheckedChange={v => toggleMutation.mutate({ id: String(item._id), col: item.category, patch: { isAvailable: v } })}
+                        data-testid={`switch-available-grid-${item._id}`}
+                      />
+                    </div>
+                    {/* Badges overlay */}
+                    <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
+                      <VegBadge isVeg={item.isVeg} />
+                      {item.todaysSpecial && (
+                        <Badge className="bg-amber-500 text-white border-0 text-xs shadow-sm">Special</Badge>
+                      )}
+                      {item.chefSpecial && (
+                        <Badge className="bg-purple-500 text-white border-0 text-xs shadow-sm"><Star className="w-2.5 h-2.5 mr-0.5" />Chef's</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-3">
+                    <p className="font-bold text-gray-900 text-sm truncate leading-tight">{item.name}</p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{item.description || "—"}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm font-black text-amber-600">{item.price ? `₹${item.price}` : "—"}</span>
+                      <Badge variant="outline" className="text-xs text-gray-400 max-w-[80px] truncate">{formatCategory(item.category || "")}</Badge>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex gap-1.5 mt-3 pt-3 border-t border-gray-50">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="flex-1 h-7 text-xs rounded-lg hover:bg-amber-50 hover:text-amber-600"
+                        onClick={() => openEdit(item)}
+                        data-testid={`button-edit-grid-${item._id}`}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 rounded-lg hover:bg-red-50 hover:text-red-500"
+                        onClick={() => setDeleteConfirm(item)}
+                        data-testid={`button-delete-grid-${item._id}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
