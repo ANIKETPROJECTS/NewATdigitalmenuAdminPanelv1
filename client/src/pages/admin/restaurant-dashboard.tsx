@@ -251,6 +251,27 @@ function OverviewSection({ rid }: { rid: string }) {
 }
 
 // ─── Cascading Category Dropdown ─────────────────────────────────────────────
+
+// Recursively collect every leaf id from a subcategory node array
+function collectAllIds(items: any[]): string[] {
+  return items.flatMap((item: any) => [
+    item.id,
+    ...(item.subcategories?.length ? collectAllIds(item.subcategories) : []),
+  ]);
+}
+
+// Recursively find the display title for an id
+function findTitleInTree(items: any[], id: string): string | undefined {
+  for (const item of items) {
+    if (item.id === id) return item.title;
+    if (item.subcategories?.length) {
+      const found = findTitleInTree(item.subcategories, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 function CascadingCategoryDropdown({
   value,
   onChange,
@@ -263,42 +284,54 @@ function CascadingCategoryDropdown({
   collections: string[];
 }) {
   const [open, setOpen] = useState(false);
+  // L1 → L2: which top-level category is hovered (by _id string)
   const [hoveredParent, setHoveredParent] = useState<string | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  // L2 → L3: which subcategory within the active L2 panel is hovered (by id string)
+  const [hoveredSub, setHoveredSub] = useState<string | null>(null);
+  // "Other" flyout
+  const [otherHovered, setOtherHovered] = useState(false);
 
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         setHoveredParent(null);
+        setHoveredSub(null);
+        setOtherHovered(false);
       }
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Build a set of subcategory ids that are covered by the tree
-  const treeSubIds = new Set(
-    categories.flatMap((c: any) => (c.subcategories || []).map((s: any) => s.id))
+  // All ids that appear anywhere in the category tree
+  const treeIds = new Set(
+    categories.flatMap((c: any) => collectAllIds(c.subcategories || []))
   );
+  const orphanCollections = collections.filter(col => !treeIds.has(col));
 
-  // Collections not covered by any category tree — show them flat at bottom
-  const orphanCollections = collections.filter(col => !treeSubIds.has(col));
-
-  // Derive label for current selection
+  // Derive the label shown in the trigger button
   const selectedLabel =
     value === "all"
       ? "All Categories"
-      : categories
-          .flatMap((c: any) => c.subcategories || [])
-          .find((s: any) => s.id === value)?.title ||
-        formatCategory(value);
+      : categories.reduce((acc: string | undefined, c: any) => {
+          return acc ?? findTitleInTree(c.subcategories || [], value);
+        }, undefined) ??
+        (orphanCollections.includes(value) ? formatCategory(value) : formatCategory(value));
+
+  const close = () => {
+    setOpen(false);
+    setHoveredParent(null);
+    setHoveredSub(null);
+    setOtherHovered(false);
+  };
 
   return (
     <div ref={ref} className="relative">
-      {/* Trigger */}
+      {/* ── Trigger ── */}
       <button
-        onClick={() => { setOpen(o => !o); setHoveredParent(null); }}
+        onClick={() => { setOpen(o => !o); setHoveredParent(null); setHoveredSub(null); setOtherHovered(false); }}
         className="flex items-center gap-2 h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors min-w-[160px] justify-between"
         data-testid="button-category-dropdown"
       >
@@ -306,12 +339,13 @@ function CascadingCategoryDropdown({
         <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Dropdown panel */}
+      {/* ── L1 Dropdown panel ── */}
       {open && (
-        <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[200] py-1.5 min-w-[200px]">
+        <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[200] py-1.5 min-w-[210px]">
+
           {/* All Categories */}
           <button
-            onClick={() => { onChange("all"); setOpen(false); }}
+            onClick={() => { onChange("all"); close(); }}
             className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
               value === "all" ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700 hover:bg-gray-50"
             }`}
@@ -322,88 +356,158 @@ function CascadingCategoryDropdown({
 
           {categories.length > 0 && <div className="mx-3 my-1 border-t border-gray-100" />}
 
-          {/* Parent categories with flyout */}
+          {/* ── L1 items → L2 flyout ── */}
           {categories.map((cat: any) => {
-            const subs = cat.subcategories || [];
-            const isHovered = hoveredParent === String(cat._id);
+            const subs: any[] = cat.subcategories || [];
+            const isL1Hovered = hoveredParent === String(cat._id);
+            // The L2 flyout panel for this category
+            const L2Panel = isL1Hovered && subs.length > 0 ? (
+              <div
+                className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] py-1.5 min-w-[190px] max-h-[70vh] overflow-y-auto"
+                onMouseEnter={() => { setHoveredParent(String(cat._id)); }}
+              >
+                <p className="px-4 pt-1.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wider">{cat.title}</p>
+                <div className="mx-3 mb-1 border-t border-gray-100" />
+
+                {subs.map((sub: any) => {
+                  const subSubs: any[] = sub.subcategories || [];
+                  const isL2Hovered = hoveredSub === sub.id;
+
+                  return (
+                    <div
+                      key={sub.id}
+                      className="relative"
+                      onMouseEnter={() => setHoveredSub(sub.id)}
+                      onMouseLeave={() => setHoveredSub(null)}
+                    >
+                      <button
+                        onClick={() => {
+                          if (subSubs.length === 0) { onChange(sub.id); close(); }
+                        }}
+                        className={`w-full flex items-center justify-between gap-2 px-4 py-2 text-sm transition-colors ${
+                          isL2Hovered
+                            ? "bg-amber-50 text-amber-700"
+                            : value === sub.id
+                            ? "bg-amber-50 text-amber-700 font-semibold"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sub.visible !== false ? "bg-emerald-400" : "bg-gray-300"}`} />
+                          <span className="truncate">{sub.title}</span>
+                          {subSubs.length > 0 && (
+                            <span className="text-xs text-gray-400 font-normal flex-shrink-0">({subSubs.length})</span>
+                          )}
+                        </div>
+                        {subSubs.length > 0
+                          ? <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          : value === sub.id && <span className="text-amber-500 flex-shrink-0 text-xs">✓</span>
+                        }
+                      </button>
+
+                      {/* ── L3 flyout (sub-subcategories) ── */}
+                      {isL2Hovered && subSubs.length > 0 && (
+                        <div
+                          className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[220] py-1.5 min-w-[180px] max-h-[60vh] overflow-y-auto"
+                          onMouseEnter={() => setHoveredSub(sub.id)}
+                        >
+                          <p className="px-4 pt-1.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wider">{sub.title}</p>
+                          <div className="mx-3 mb-1 border-t border-gray-100" />
+                          {subSubs.map((ss: any) => (
+                            <button
+                              key={ss.id}
+                              onClick={() => { onChange(ss.id); close(); }}
+                              className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                                value === ss.id
+                                  ? "bg-amber-50 text-amber-700 font-semibold"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ss.visible !== false ? "bg-emerald-400" : "bg-gray-300"}`} />
+                              <span className="truncate">{ss.title}</span>
+                              {value === ss.id && <span className="ml-auto text-amber-500 flex-shrink-0 text-xs">✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null;
+
             return (
               <div
                 key={String(cat._id)}
                 className="relative"
-                onMouseEnter={() => setHoveredParent(String(cat._id))}
+                onMouseEnter={() => { setHoveredParent(String(cat._id)); setHoveredSub(null); setOtherHovered(false); }}
                 onMouseLeave={() => setHoveredParent(null)}
               >
                 <button
-                  onClick={() => {
-                    if (subs.length === 0) {
-                      onChange(cat.title.toLowerCase().replace(/\s+/g, "-"));
-                      setOpen(false);
-                    }
-                  }}
+                  onClick={() => { if (subs.length === 0) { onChange(cat.id || cat.title.toLowerCase().replace(/\s+/g, "-")); close(); } }}
                   className={`w-full flex items-center justify-between gap-2 px-4 py-2 text-sm transition-colors ${
-                    isHovered ? "bg-amber-50 text-amber-700" : "text-gray-700 hover:bg-gray-50"
+                    isL1Hovered ? "bg-amber-50 text-amber-700" : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
                     {cat.image && (
                       <img src={cat.image} alt="" className="w-4 h-4 rounded object-cover opacity-70" onError={e => { (e.target as any).style.display = "none"; }} />
                     )}
-                    <span className="font-medium">{cat.title}</span>
-                    {subs.length > 0 && (
-                      <span className="text-xs text-gray-400 font-normal">({subs.length})</span>
-                    )}
+                    <span className="font-semibold tracking-wide">{cat.title}</span>
+                    {subs.length > 0 && <span className="text-xs text-gray-400 font-normal">({subs.length})</span>}
                   </div>
-                  {subs.length > 0 && (
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                  )}
+                  {subs.length > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />}
+                </button>
+                {L2Panel}
+              </div>
+            );
+          })}
+
+          {/* ── "Other" flyout for orphan collections ── */}
+          {orphanCollections.length > 0 && (
+            <>
+              <div className="mx-3 my-1 border-t border-gray-100" />
+              <div
+                className="relative"
+                onMouseEnter={() => { setOtherHovered(true); setHoveredParent(null); }}
+                onMouseLeave={() => setOtherHovered(false)}
+              >
+                <button
+                  className={`w-full flex items-center justify-between gap-2 px-4 py-2 text-sm transition-colors ${
+                    otherHovered ? "bg-amber-50 text-amber-700" : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <UtensilsCrossed className="w-3.5 h-3.5 opacity-60" />
+                    <span className="font-semibold tracking-wide">Other</span>
+                    <span className="text-xs text-gray-400 font-normal">({orphanCollections.length})</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                 </button>
 
-                {/* Sub-panel flyout */}
-                {isHovered && subs.length > 0 && (
+                {otherHovered && (
                   <div
-                    className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] py-1.5 min-w-[180px]"
-                    onMouseEnter={() => setHoveredParent(String(cat._id))}
+                    className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] py-1.5 min-w-[190px] max-h-[70vh] overflow-y-auto"
+                    onMouseEnter={() => setOtherHovered(true)}
                   >
-                    <p className="px-4 pt-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">{cat.title}</p>
+                    <p className="px-4 pt-1.5 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wider">Other</p>
                     <div className="mx-3 mb-1 border-t border-gray-100" />
-                    {subs.map((sub: any) => (
+                    {orphanCollections.map(col => (
                       <button
-                        key={sub.id}
-                        onClick={() => { onChange(sub.id); setOpen(false); setHoveredParent(null); }}
-                        className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
-                          value === sub.id
-                            ? "bg-amber-50 text-amber-700 font-semibold"
-                            : "text-gray-700 hover:bg-gray-50"
+                        key={col}
+                        onClick={() => { onChange(col); close(); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
+                          value === col ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700 hover:bg-gray-50"
                         }`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sub.visible ? "bg-emerald-400" : "bg-gray-300"}`} />
-                        {sub.title}
-                        {value === sub.id && <span className="ml-auto text-amber-500">✓</span>}
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                        <span className="truncate">{formatCategory(col)}</span>
+                        {value === col && <span className="ml-auto text-amber-500 flex-shrink-0 text-xs">✓</span>}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-            );
-          })}
-
-          {/* Orphan collections (not in any category tree) */}
-          {orphanCollections.length > 0 && (
-            <>
-              <div className="mx-3 my-1 border-t border-gray-100" />
-              <p className="px-4 pt-1 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wider">Other</p>
-              {orphanCollections.map(col => (
-                <button
-                  key={col}
-                  onClick={() => { onChange(col); setOpen(false); }}
-                  className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
-                    value === col ? "bg-amber-50 text-amber-700 font-semibold" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <UtensilsCrossed className="w-3.5 h-3.5 opacity-40" />
-                  {formatCategory(col)}
-                </button>
-              ))}
             </>
           )}
         </div>
