@@ -14,6 +14,7 @@ import { getMockRestaurants, addMockRestaurant, getMockMenuItems, addMockMenuIte
 import { connectToRestaurantDatabase, getMenuItemModel, fetchMenuItemsFromCustomDB, createMenuItemInCustomDB, updateMenuItemInCustomDB, deleteMenuItemFromCustomDB, extractCategoriesFromCustomDB } from "./db/dynamic-mongodb";
 import { generateQRCode } from "./utils/qrcode";
 import adminSettingsRoutes from "./routes/admin-settings";
+import restaurantDashboardRoutes from "./routes/restaurant-dashboard";
 import multer from 'multer';
 import XLSX from 'xlsx';
 import path from 'path';
@@ -1637,6 +1638,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Additional admin routes for export and logs  
   app.use("/api/admin", adminSettingsRoutes);
+
+  // Restaurant Dashboard Routes (connect to restaurant's own MongoDB)
+  app.use("/api/restaurant-db", restaurantDashboardRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

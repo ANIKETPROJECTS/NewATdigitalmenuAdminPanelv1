@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Store, Menu, Users, Crown, LogOut, Edit, Trash2, Settings, UserPlus } from "lucide-react";
+import { Plus, Store, Menu, Users, Crown, LogOut, Edit, Trash2, Settings, UserPlus, LayoutDashboard } from "lucide-react";
 import { useLocation } from "wouter";
 import QRCodeModal from "@/components/QRCodeModal";
 import AdminSettingsModal from "@/components/AdminSettingsModal";
@@ -600,11 +600,12 @@ export default function AdminDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setLocation(`/admin/restaurants/${restaurant._id}/menu`)}
+                          onClick={() => setLocation(`/admin/restaurants/${restaurant._id}/dashboard`)}
                           className={`border-blue-600 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm ${!isMaster ? 'col-span-2' : ''}`}
+                          data-testid={`button-dashboard-${restaurant._id}`}
                         >
-                          <Menu className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                          Menu
+                          <LayoutDashboard className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          Dashboard
                         </Button>
                       </div>
                       

@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import AdminLogin from "@/pages/admin/login";
 import AdminDashboard from "@/pages/admin/dashboard";
 import RestaurantForm from "@/pages/admin/restaurant-form";
-import MenuManagement from "@/pages/admin/menu-management";
+import RestaurantDashboard from "@/pages/admin/restaurant-dashboard";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
 function HomePage() {
@@ -31,7 +31,7 @@ function Router() {
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/restaurants/new" component={RestaurantForm} />
       <Route path="/admin/restaurants/:id/edit" component={RestaurantForm} />
-      <Route path="/admin/restaurants/:restaurantId/menu" component={MenuManagement} />
+      <Route path="/admin/restaurants/:restaurantId/dashboard" component={RestaurantDashboard} />
       
       <Route component={NotFound} />
     </Switch>
