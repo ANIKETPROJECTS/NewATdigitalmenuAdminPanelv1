@@ -20,23 +20,7 @@ import XLSX from 'xlsx';
 import path from 'path';
 import fs from 'fs';
 import mongoose from 'mongoose';
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import dotenv from 'dotenv';
-
-// Load environment variables explicitly for Cloudinary if they are missing
-if (!process.env.CLOUDINARY_CLOUD_NAME) {
-  dotenv.config();
-}
-
 import nodemailer from 'nodemailer';
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dnfee6rib',
-  api_key: process.env.CLOUDINARY_API_KEY || '193651557981285',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'sRCb0UvRvqeF0cPLS9eSJj52Nms',
-});
 
 async function sendOTPEmail(email: string, otp: string) {
   try {
@@ -65,72 +49,11 @@ async function sendOTPEmail(email: string, otp: string) {
   }
 }
 
-// Configure Cloudinary storage for multer
-const cloudinaryStorage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'menu-items',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-  } as any,
-});
-
-const cloudinaryUpload = multer({ storage: cloudinaryStorage });
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Connect to MongoDB
   log("🔌 Attempting to connect to MongoDB...");
   await connectToDatabase();
   log("✅ Connected to MongoDB successfully");
-
-  // Endpoint for Cloudinary image upload
-  app.post("/api/admin/upload-image", authenticateAdmin, (req: any, res, next) => {
-    console.log("📸 Incoming upload request to /api/admin/upload-image");
-    console.log("🔑 Auth Admin:", req.admin?.username);
-    cloudinaryUpload.single('image')(req, res, (err) => {
-      if (err) {
-        console.error("❌ Multer/Cloudinary middleware error:", err);
-        console.log("☁️ Cloudinary Config Check:", {
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? "Present" : "Missing",
-          api_key: process.env.CLOUDINARY_API_KEY ? "Present" : "Missing",
-          api_secret: process.env.CLOUDINARY_API_SECRET ? "Present" : "Missing"
-        });
-        return res.status(500).json({ 
-          message: "Middleware upload failed", 
-          error: err.message,
-          stack: err.stack,
-          code: (err as any).code,
-          http_code: (err as any).http_code
-        });
-      }
-      next();
-    });
-  }, async (req: any, res) => {
-    try {
-      console.log("📁 File processed by middleware:", req.file ? {
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path
-      } : "No file");
-      
-      if (!req.file) {
-        console.error("❌ No file found in request after middleware");
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      
-      console.log("✅ Image upload successful:", req.file.path);
-      res.json({ 
-        url: req.file.path,
-        success: true 
-      });
-    } catch (error: any) {
-      console.error("❌ Controller upload error:", error);
-      res.status(500).json({ 
-        message: "Failed to process uploaded image",
-        error: error.message 
-      });
-    }
-  });
 
   // Configure multer for file uploads - no size limit
   const upload = multer({ 

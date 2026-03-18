@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { MongoClient, ObjectId } from 'mongodb';
 import { Restaurant } from '../models/Restaurant';
 import { authenticateAdmin } from '../middleware/auth';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
 const router = Router();
 
@@ -469,6 +472,39 @@ router.patch('/:restaurantId/call-waiter', authenticateAdmin, async (req, res) =
     const { client } = await getRestaurantClient(req.params.restaurantId);
     await client.db('menupage').collection('callwaiter').updateOne({}, { $set: req.body }, { upsert: true });
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+// ── Image Upload (per-restaurant Cloudinary) ──────────────────────────────────
+router.post('/:restaurantId/upload-image', authenticateAdmin, async (req: any, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.restaurantId);
+    if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
+
+    const cloudName = (restaurant as any).cloudinaryCloudName;
+    const apiKey = (restaurant as any).cloudinaryApiKey;
+    const apiSecret = (restaurant as any).cloudinaryApiSecret;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(400).json({ message: 'This restaurant has no Cloudinary credentials configured. Please add them in the restaurant settings.' });
+    }
+
+    cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
+
+    const storage = new CloudinaryStorage({
+      cloudinary: cloudinary as any,
+      params: { folder: `menu-items/${req.params.restaurantId}`, allowed_formats: ['jpg', 'png', 'jpeg', 'webp'] } as any,
+    });
+
+    const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }).single('image');
+
+    upload(req, res, (err) => {
+      if (err) return res.status(500).json({ message: 'Upload failed', error: err.message });
+      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      res.json({ url: (req.file as any).path || (req.file as any).secure_url });
+    });
   } catch (err: any) {
     res.status(err.status || 500).json({ message: err.message });
   }

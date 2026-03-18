@@ -38,6 +38,18 @@ const restaurantSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  cloudinaryCloudName: {
+    type: String,
+    required: false
+  },
+  cloudinaryApiKey: {
+    type: String,
+    required: false
+  },
+  cloudinaryApiSecret: {
+    type: String,
+    required: false
+  },
   customTypes: {
     type: [String],
     default: []

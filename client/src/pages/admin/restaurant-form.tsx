@@ -937,6 +937,9 @@ export default function RestaurantForm() {
     image: "",
     website: "",
     mongoUri: "",
+    cloudinaryCloudName: "",
+    cloudinaryApiKey: "",
+    cloudinaryApiSecret: "",
     customTypes: "Starters,Main Course,Desserts,Beverages",
     isActive: true,
   });
@@ -969,6 +972,9 @@ export default function RestaurantForm() {
         image: restaurant.image || "",
         website: restaurant.website || "",
         mongoUri: restaurant.mongoUri || "",
+        cloudinaryCloudName: restaurant.cloudinaryCloudName || "",
+        cloudinaryApiKey: restaurant.cloudinaryApiKey || "",
+        cloudinaryApiSecret: restaurant.cloudinaryApiSecret || "",
         customTypes: restaurant.customTypes?.join(",") || "Starters,Main Course,Desserts,Beverages",
         isActive: restaurant.isActive ?? true,
       });
@@ -1306,6 +1312,63 @@ export default function RestaurantForm() {
                 />
                 <p className="text-xs sm:text-sm text-gray-600">
                   If provided, the system will fetch menu items directly from this database
+                </p>
+              </div>
+
+              {/* Cloudinary Credentials */}
+              <div className="space-y-4 border border-blue-100 rounded-lg p-4 bg-blue-50">
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-800">Cloudinary Credentials (Optional)</h3>
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    Used to upload menu item images from this restaurant's dashboard. Each restaurant uses its own dedicated Cloudinary account.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="cloudinaryCloudName" className="text-sm font-medium text-gray-700">
+                      Cloud Name
+                    </Label>
+                    <Input
+                      id="cloudinaryCloudName"
+                      type="text"
+                      value={formData.cloudinaryCloudName}
+                      onChange={(e) => handleInputChange("cloudinaryCloudName", e.target.value)}
+                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-blue-500"
+                      placeholder="e.g. my-cloud-name"
+                      data-testid="input-cloudinary-cloud-name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="cloudinaryApiKey" className="text-sm font-medium text-gray-700">
+                      API Key
+                    </Label>
+                    <Input
+                      id="cloudinaryApiKey"
+                      type="text"
+                      value={formData.cloudinaryApiKey}
+                      onChange={(e) => handleInputChange("cloudinaryApiKey", e.target.value)}
+                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-blue-500"
+                      placeholder="Your Cloudinary API key"
+                      data-testid="input-cloudinary-api-key"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="cloudinaryApiSecret" className="text-sm font-medium text-gray-700">
+                      API Secret
+                    </Label>
+                    <Input
+                      id="cloudinaryApiSecret"
+                      type="password"
+                      value={formData.cloudinaryApiSecret}
+                      onChange={(e) => handleInputChange("cloudinaryApiSecret", e.target.value)}
+                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-blue-500"
+                      placeholder="Your Cloudinary API secret"
+                      data-testid="input-cloudinary-api-secret"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Find these in your Cloudinary dashboard → Settings → Access Keys
                 </p>
               </div>
 

@@ -22,7 +22,7 @@ import {
   CalendarCheck, Share2, Monitor, Info, CreditCard, ImageIcon, Bell,
   ArrowLeft, Menu, X, ChevronRight, ChevronDown, ChevronUp, Leaf, Star,
   Download, Search, Plus, Edit, Trash2, RefreshCw, Eye, EyeOff, Save,
-  Phone, Mail, Globe, MapPin, Instagram, Facebook, Youtube,
+  Phone, Mail, Globe, MapPin, Instagram, Facebook, Youtube, Upload, Link,
 } from "lucide-react";
 
 // ─── API base ─────────────────────────────────────────────────────────────────
@@ -205,6 +205,30 @@ function MenuItemsSection({ rid }: { rid: string }) {
     setForm({ ...item, allergens: Array.isArray(item.allergens) ? item.allergens.join(", ") : "", ingredients: Array.isArray(item.ingredients) ? item.ingredients.join(", ") : "" });
   }
 
+  const [imgUploading, setImgUploading] = useState(false);
+
+  async function handleImageFileUpload(file: File) {
+    setImgUploading(true);
+    try {
+      const token = localStorage.getItem("adminToken");
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`/api/restaurant-db/${rid}/upload-image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Upload failed");
+      setForm(p => ({ ...p, image: data.url }));
+      toast({ title: "Image uploaded successfully" });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setImgUploading(false);
+    }
+  }
+
   function ItemForm({ onClose }: { onClose: () => void }) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -218,7 +242,39 @@ function MenuItemsSection({ rid }: { rid: string }) {
         </div>
         <div className="md:col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} /></div>
         <div><Label>Price</Label><Input value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="e.g. 250 or 30ml: ₹200 / NIP: ₹400" /></div>
-        <div><Label>Image URL</Label><Input value={form.image} onChange={e => setForm(p => ({ ...p, image: e.target.value }))} /></div>
+
+        {/* Image field: file upload + URL input */}
+        <div className="md:col-span-2 space-y-2">
+          <Label>Image</Label>
+          <div className="flex gap-2 items-center">
+            <Input
+              value={form.image}
+              onChange={e => setForm(p => ({ ...p, image: e.target.value }))}
+              placeholder="Paste image URL or upload a file →"
+              className="flex-1"
+              data-testid="input-menu-item-image-url"
+            />
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                data-testid="input-menu-item-image-file"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFileUpload(f); e.target.value = ""; }}
+              />
+              <Button type="button" variant="outline" size="sm" className="gap-1.5 text-slate-300 border-slate-600 hover:bg-slate-700" disabled={imgUploading} asChild>
+                <span>{imgUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}{imgUploading ? "Uploading…" : "Upload"}</span>
+              </Button>
+            </label>
+          </div>
+          {form.image && (
+            <div className="flex items-center gap-2 mt-1">
+              <img src={form.image} alt="Preview" className="h-12 w-12 object-cover rounded border border-slate-600" onError={e => (e.currentTarget.style.display = "none")} />
+              <span className="text-xs text-slate-400 truncate max-w-xs">{form.image}</span>
+            </div>
+          )}
+        </div>
+
         <div><Label>Preparation Time</Label><Input value={form.preparationTime} onChange={e => setForm(p => ({ ...p, preparationTime: e.target.value }))} placeholder="e.g. 15 mins" /></div>
         <div><Label>Allergens (comma-separated)</Label><Input value={form.allergens} onChange={e => setForm(p => ({ ...p, allergens: e.target.value }))} /></div>
         <div className="md:col-span-2"><Label>Ingredients (comma-separated)</Label><Input value={form.ingredients} onChange={e => setForm(p => ({ ...p, ingredients: e.target.value }))} /></div>
