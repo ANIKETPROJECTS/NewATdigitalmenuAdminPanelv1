@@ -182,6 +182,17 @@ router.get('/:restaurantId/categories', authenticateAdmin, async (req, res) => {
   }
 });
 
+router.post('/:restaurantId/categories', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    const doc = { subcategories: [], ...req.body };
+    const result = await client.db('menupage').collection('categories').insertOne(doc);
+    res.json({ _id: result.insertedId, ...doc });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
 router.patch('/:restaurantId/categories/:id', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
@@ -189,6 +200,16 @@ router.patch('/:restaurantId/categories/:id', authenticateAdmin, async (req, res
       { _id: toObjectId(req.params.id) },
       { $set: req.body }
     );
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete('/:restaurantId/categories/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('menupage').collection('categories').deleteOne({ _id: toObjectId(req.params.id) });
     res.json({ success: true });
   } catch (err: any) {
     res.status(err.status || 500).json({ message: err.message });

@@ -1144,34 +1144,206 @@ function MenuItemsSection({ rid }: { rid: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Categories
 // ═══════════════════════════════════════════════════════════════════════════════
+// ── Category helpers ──────────────────────────────────────────────────────────
 type CatSortBy = "order-asc" | "order-desc" | "name-asc" | "name-desc" | "subcats-asc" | "subcats-desc";
 type CatFilter  = "all" | "visible" | "hidden";
 
 const CAT_SORT_OPTIONS: { value: CatSortBy; label: string }[] = [
-  { value: "order-asc",    label: "Order (Asc)"       },
-  { value: "order-desc",   label: "Order (Desc)"      },
-  { value: "name-asc",     label: "Name (A-Z)"        },
-  { value: "name-desc",    label: "Name (Z-A)"        },
-  { value: "subcats-asc",  label: "Subcategories ↑"   },
-  { value: "subcats-desc", label: "Subcategories ↓"   },
+  { value: "order-asc",    label: "Order (Asc)"      },
+  { value: "order-desc",   label: "Order (Desc)"     },
+  { value: "name-asc",     label: "Name (A-Z)"       },
+  { value: "name-desc",    label: "Name (Z-A)"       },
+  { value: "subcats-asc",  label: "Subcategories ↑"  },
+  { value: "subcats-desc", label: "Subcategories ↓"  },
 ];
 
+const CAT_EMPTY = { title: "", image: "", order: 1, visible: true };
+
+function genId() { return Math.random().toString(36).substring(2, 9); }
+
+function editInSubcats(subcats: any[], id: string, update: any): any[] {
+  return subcats.map(s => {
+    if (s.id === id) return { ...s, ...update };
+    if (s.subcategories?.length) return { ...s, subcategories: editInSubcats(s.subcategories, id, update) };
+    return s;
+  });
+}
+
+function deleteFromSubcats(subcats: any[], id: string): any[] {
+  return subcats
+    .filter(s => s.id !== id)
+    .map(s => s.subcategories?.length ? { ...s, subcategories: deleteFromSubcats(s.subcategories, id) } : s);
+}
+
+function addToSubcats(subcats: any[], parentId: string | null, item: any): any[] {
+  if (parentId === null) return [...subcats, item];
+  return subcats.map(s => {
+    if (s.id === parentId) return { ...s, subcategories: [...(s.subcategories || []), item] };
+    if (s.subcategories?.length) return { ...s, subcategories: addToSubcats(s.subcategories, parentId, item) };
+    return s;
+  });
+}
+
+// ── Recursive subcategory tree ────────────────────────────────────────────────
+function SubcatTree({ subcats, depth = 0, onUpdate }: {
+  subcats: any[];
+  depth?: number;
+  onUpdate: (newSubcats: any[]) => void;
+}) {
+  const [expanded, setExpanded]   = useState<Set<string>>(new Set());
+  const [addParent, setAddParent] = useState<string | null | false>(false);
+  const [editId, setEditId]       = useState<string | null>(null);
+  const [delId, setDelId]         = useState<string | null>(null);
+  const [form, setForm]           = useState({ title: "", visible: true });
+
+  const indent = depth * 16;
+
+  function toggleExpand(id: string) {
+    setExpanded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+
+  function handleAdd() {
+    const newItem = { id: genId(), title: form.title, visible: form.visible, subcategories: [] };
+    onUpdate(addToSubcats(subcats, addParent === null ? null : addParent as string, newItem));
+    setAddParent(false);
+    setForm({ title: "", visible: true });
+  }
+
+  function handleEdit() {
+    onUpdate(editInSubcats(subcats, editId!, form));
+    setEditId(null);
+    setForm({ title: "", visible: true });
+  }
+
+  function handleDelete() {
+    onUpdate(deleteFromSubcats(subcats, delId!));
+    setDelId(null);
+  }
+
+  function handleToggle(id: string, visible: boolean) {
+    onUpdate(editInSubcats(subcats, id, { visible }));
+  }
+
+  const bgColors = ["bg-gray-50", "bg-blue-50/40", "bg-violet-50/40"];
+  const borderColors = ["border-gray-100", "border-blue-100", "border-violet-100"];
+  const badgeColors = ["text-gray-500 bg-gray-100", "text-blue-500 bg-blue-100", "text-violet-500 bg-violet-100"];
+
+  return (
+    <div className="space-y-1.5" style={{ marginLeft: `${indent}px` }}>
+      {subcats.map((sub: any) => (
+        <div key={sub.id}>
+          <div className={`flex items-center gap-2 p-2 rounded-xl border ${bgColors[Math.min(depth, 2)]} ${borderColors[Math.min(depth, 2)]}`}>
+            <span className={`text-[10px] font-bold rounded px-1 py-0.5 leading-none flex-shrink-0 ${badgeColors[Math.min(depth, 2)]}`}>
+              {depth === 0 ? "SUB" : depth === 1 ? "SUB2" : "SUB3"}
+            </span>
+            <span className="text-sm text-gray-700 flex-1 font-medium truncate">{sub.title}</span>
+            <Switch checked={sub.visible} onCheckedChange={v => handleToggle(sub.id, v)} data-testid={`switch-subcat-${sub.id}`} />
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg text-blue-500 hover:bg-blue-50"
+              onClick={() => { setAddParent(sub.id); setForm({ title: "", visible: true }); }}
+              title="Add sub-subcategory" data-testid={`button-addsub-${sub.id}`}>
+              <Plus className="w-3 h-3" />
+            </Button>
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg"
+              onClick={() => { setEditId(sub.id); setForm({ title: sub.title, visible: sub.visible }); }}
+              data-testid={`button-editsubcat-${sub.id}`}>
+              <Edit className="w-3 h-3" />
+            </Button>
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg text-red-400 hover:bg-red-50"
+              onClick={() => setDelId(sub.id)} data-testid={`button-deletesubcat-${sub.id}`}>
+              <Trash2 className="w-3 h-3" />
+            </Button>
+            {sub.subcategories?.length > 0 && (
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg"
+                onClick={() => toggleExpand(sub.id)} data-testid={`button-expandsubcat-${sub.id}`}>
+                {expanded.has(sub.id) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              </Button>
+            )}
+          </div>
+          {expanded.has(sub.id) && sub.subcategories?.length > 0 && (
+            <SubcatTree subcats={sub.subcategories} depth={depth + 1}
+              onUpdate={newChildren => onUpdate(editInSubcats(subcats, sub.id, { subcategories: newChildren }))} />
+          )}
+        </div>
+      ))}
+
+      {/* Add sub-subcategory inline form */}
+      {addParent !== false && (
+        <div className={`flex items-center gap-2 p-2 rounded-xl border border-dashed ${borderColors[Math.min(depth + 1, 2)]} bg-white`}
+          style={{ marginLeft: addParent !== null ? "16px" : "0" }}>
+          <Input autoFocus value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+            placeholder="Subcategory name…" className="h-7 text-sm flex-1" data-testid="input-subcat-name" />
+          <Switch checked={form.visible} onCheckedChange={v => setForm(p => ({ ...p, visible: v }))} />
+          <Button size="sm" className="h-7 px-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs"
+            onClick={handleAdd} disabled={!form.title.trim()}>Add</Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg"
+            onClick={() => { setAddParent(false); setForm({ title: "", visible: true }); }}>
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+
+      {/* Edit dialog */}
+      <Dialog open={!!editId} onOpenChange={v => !v && setEditId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Subcategory</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Name</Label><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} data-testid="input-editsubcat-name" /></div>
+            <div className="flex items-center gap-3"><Switch checked={form.visible} onCheckedChange={v => setForm(p => ({ ...p, visible: v }))} /><Label>Visible</Label></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditId(null)}>Cancel</Button>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={handleEdit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete dialog */}
+      <Dialog open={!!delId} onOpenChange={v => !v && setDelId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Subcategory</DialogTitle><DialogDescription>This will also remove all nested sub-subcategories. Are you sure?</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDelId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ── Main CategoriesSection ─────────────────────────────────────────────────────
 function CategoriesSection({ rid }: { rid: string }) {
   const { toast } = useToast();
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [search, setSearch]     = useState("");
-  const [sortBy, setSortBy]     = useState<CatSortBy>("order-asc");
-  const [filter, setFilter]     = useState<CatFilter>("all");
+  const [expanded, setExpanded]     = useState<Set<string>>(new Set());
+  const [search, setSearch]         = useState("");
+  const [sortBy, setSortBy]         = useState<CatSortBy>("order-asc");
+  const [filter, setFilter]         = useState<CatFilter>("all");
+  const [addOpen, setAddOpen]       = useState(false);
+  const [editCat, setEditCat]       = useState<any>(null);
+  const [deleteCat, setDeleteCat]   = useState<any>(null);
+  const [catForm, setCatForm]       = useState<any>(CAT_EMPTY);
 
   const { data: categories = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "categories")],
     queryFn: () => apiRequest(api(rid, "categories")),
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data: any) => apiRequest(api(rid, "categories"), { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => { toast({ title: "Category created" }); setAddOpen(false); setCatForm(CAT_EMPTY); refetch(); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       apiRequest(`${api(rid, "categories")}/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-    onSuccess: () => { toast({ title: "Updated" }); refetch(); },
+    onSuccess: () => { toast({ title: "Updated" }); setEditCat(null); refetch(); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`${api(rid, "categories")}/${id}`, { method: "DELETE" }),
+    onSuccess: () => { toast({ title: "Deleted" }); setDeleteCat(null); refetch(); },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -1179,12 +1351,13 @@ function CategoriesSection({ rid }: { rid: string }) {
     setExpanded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
 
+  function handleSubcatUpdate(cat: any, newSubcats: any[]) {
+    updateMutation.mutate({ id: String(cat._id), data: { subcategories: newSubcats } });
+  }
+
   const displayed = useMemo(() => {
     let r = [...categories];
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter(c => (c.title || "").toLowerCase().includes(q));
-    }
+    if (search.trim()) { const q = search.toLowerCase(); r = r.filter(c => (c.title || "").toLowerCase().includes(q)); }
     if (filter === "visible") r = r.filter(c => c.visible);
     if (filter === "hidden")  r = r.filter(c => !c.visible);
     r.sort((a, b) => {
@@ -1199,11 +1372,28 @@ function CategoriesSection({ rid }: { rid: string }) {
     return r;
   }, [categories, search, sortBy, filter]);
 
+  function CategoryForm({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+    return (
+      <div className="space-y-3">
+        <div><Label>Title *</Label><Input value={value.title} onChange={e => onChange({ ...value, title: e.target.value })} placeholder="e.g. Cocktails" data-testid="input-cat-title" /></div>
+        <div><Label>Image URL</Label><Input value={value.image} onChange={e => onChange({ ...value, image: e.target.value })} placeholder="https://…" data-testid="input-cat-image" /></div>
+        {value.image && <img src={value.image} alt="preview" className="h-24 w-full object-cover rounded-xl border" onError={e => { (e.target as any).style.display = "none"; }} />}
+        <div><Label>Order</Label><Input type="number" value={value.order} onChange={e => onChange({ ...value, order: parseInt(e.target.value) || 1 })} data-testid="input-cat-order" /></div>
+        <div className="flex items-center gap-3"><Switch checked={value.visible} onCheckedChange={v => onChange({ ...value, visible: v })} /><Label>Visible</Label></div>
+      </div>
+    );
+  }
+
   if (isLoading) return <LoadRow />;
 
   return (
     <div>
-      <SectionTitle>Categories</SectionTitle>
+      <div className="flex items-center justify-between mb-5">
+        <SectionTitle>Categories</SectionTitle>
+        <Button onClick={() => { setCatForm(CAT_EMPTY); setAddOpen(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl" data-testid="button-add-category">
+          <Plus className="w-4 h-4 mr-2" />Add Category
+        </Button>
+      </div>
 
       {/* Toolbar */}
       <div className="flex flex-wrap gap-3 mb-5">
@@ -1234,9 +1424,10 @@ function CategoriesSection({ rid }: { rid: string }) {
       {displayed.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <LayoutGrid className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-gray-400 font-medium">{categories.length === 0 ? "No categories found" : "No categories match your search"}</p>
+          <p className="text-gray-400 font-medium">{categories.length === 0 ? "No categories yet" : "No categories match your search"}</p>
         </div>
       )}
+
       <div className="space-y-3">
         {displayed.map((cat: any, idx: number) => (
           <div key={String(cat._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid={`card-category-${cat._id}`}>
@@ -1249,35 +1440,102 @@ function CategoriesSection({ rid }: { rid: string }) {
                   : <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center"><LayoutGrid className="w-4 h-4 text-emerald-400" /></div>
                 }
               </div>
+
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900">{cat.title}</p>
                 <p className="text-xs text-gray-400">Order: {cat.order} · {cat.subcategories?.length || 0} subcategories</p>
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-${cat._id}`} />
                 <div className="flex flex-col gap-0.5">
                   <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: Math.max(1, cat.order - 1) } })} disabled={idx === 0} data-testid={`button-moveup-cat-${cat._id}`}><ChevronUp className="w-3 h-3" />Up</Button>
                   <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: cat.order + 1 } })} disabled={idx === displayed.length - 1} data-testid={`button-movedown-cat-${cat._id}`}><ChevronDown className="w-3 h-3" />Down</Button>
                 </div>
+                {/* Add subcategory to top level */}
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                  title="Add subcategory"
+                  onClick={() => {
+                    setExpanded(prev => { const s = new Set(prev); s.add(String(cat._id)); return s; });
+                  }}
+                  data-testid={`button-addsub-cat-${cat._id}`}
+                ><Plus className="w-3 h-3" /></Button>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-${cat._id}`}><Edit className="w-3 h-3" /></Button>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => toggleExpand(String(cat._id))} data-testid={`button-expand-cat-${cat._id}`}>{expanded.has(String(cat._id)) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</Button>
               </div>
             </div>
-            {expanded.has(String(cat._id)) && cat.subcategories?.length > 0 && (
-              <div className="px-4 pb-4 ml-6 space-y-2 border-t border-gray-50 pt-3">
-                {cat.subcategories.map((sub: any) => (
-                  <div key={sub.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                    <span className="text-sm text-gray-700 flex-1">{sub.title}</span>
-                    <Switch checked={sub.visible} onCheckedChange={v => {
-                      const updatedSubs = cat.subcategories.map((s: any) => s.id === sub.id ? { ...s, visible: v } : s);
-                      updateMutation.mutate({ id: String(cat._id), data: { subcategories: updatedSubs } });
-                    }} data-testid={`switch-subcat-${sub.id}`} />
-                  </div>
-                ))}
+
+            {/* Expanded: recursive subcategory tree */}
+            {expanded.has(String(cat._id)) && (
+              <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-2">
+                <SubcatTree
+                  subcats={cat.subcategories || []}
+                  depth={0}
+                  onUpdate={newSubcats => handleSubcatUpdate(cat, newSubcats)}
+                />
+                {/* Quick add top-level subcategory */}
+                <AddSubcatInline
+                  onAdd={item => handleSubcatUpdate(cat, [...(cat.subcategories || []), item])}
+                />
               </div>
             )}
           </div>
         ))}
       </div>
+
+      {/* Add category dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent><DialogHeader><DialogTitle>Add Category</DialogTitle></DialogHeader>
+          <CategoryForm value={catForm} onChange={setCatForm} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => createMutation.mutate(catForm)} disabled={createMutation.isPending || !catForm.title.trim()}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit category dialog */}
+      <Dialog open={!!editCat} onOpenChange={v => !v && setEditCat(null)}>
+        <DialogContent><DialogHeader><DialogTitle>Edit Category</DialogTitle></DialogHeader>
+          <CategoryForm value={catForm} onChange={setCatForm} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditCat(null)}>Cancel</Button>
+            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => updateMutation.mutate({ id: String(editCat._id), data: catForm })} disabled={updateMutation.isPending}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete category dialog */}
+      <Dialog open={!!deleteCat} onOpenChange={v => !v && setDeleteCat(null)}>
+        <DialogContent><DialogHeader><DialogTitle>Delete Category</DialogTitle><DialogDescription>Delete "{deleteCat?.title}" and all its subcategories? This cannot be undone.</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteCat(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteMutation.mutate(String(deleteCat._id))} disabled={deleteMutation.isPending}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function AddSubcatInline({ onAdd }: { onAdd: (item: any) => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [visible, setVisible] = useState(true);
+  if (!open) return (
+    <button onClick={() => setOpen(true)} className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium py-1" data-testid="button-add-subcategory">
+      <Plus className="w-3.5 h-3.5" />Add subcategory
+    </button>
+  );
+  return (
+    <div className="flex items-center gap-2 p-2 rounded-xl border border-dashed border-emerald-200 bg-white">
+      <Input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Subcategory name…" className="h-7 text-sm flex-1" data-testid="input-add-subcat-name" />
+      <Switch checked={visible} onCheckedChange={setVisible} />
+      <Button size="sm" className="h-7 px-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs"
+        onClick={() => { if (title.trim()) { onAdd({ id: genId(), title: title.trim(), visible, subcategories: [] }); setTitle(""); setOpen(false); } }}
+        disabled={!title.trim()}>Add</Button>
+      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => { setTitle(""); setOpen(false); }}><X className="w-3 h-3" /></Button>
     </div>
   );
 }
