@@ -1349,6 +1349,17 @@ function CarouselSection({ rid }: { rid: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Coupons
 // ═══════════════════════════════════════════════════════════════════════════════
+type CouponSortBy = "code-asc" | "code-desc" | "title-asc" | "title-desc" | "tag-asc" | "tag-desc";
+
+const COUPON_SORT_OPTIONS: { value: CouponSortBy; label: string }[] = [
+  { value: "code-asc",   label: "Code (A-Z)"   },
+  { value: "code-desc",  label: "Code (Z-A)"   },
+  { value: "title-asc",  label: "Title (A-Z)"  },
+  { value: "title-desc", label: "Title (Z-A)"  },
+  { value: "tag-asc",    label: "Tag (A-Z)"    },
+  { value: "tag-desc",   label: "Tag (Z-A)"    },
+];
+
 function CouponsSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -1357,10 +1368,52 @@ function CouponsSection({ rid }: { rid: string }) {
   const emptyForm = { code: "", title: "", subtitle: "", description: "", validity: "", tag: "", show: true };
   const [form, setForm] = useState(emptyForm);
 
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [filterTag, setFilterTag] = useState("all");
+  const [sortBy, setSortBy] = useState<CouponSortBy>("code-asc");
+
   const { data: coupons = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "coupons")],
     queryFn: () => apiRequest(api(rid, "coupons")),
   });
+
+  const tags = useMemo(() => {
+    const set = new Set<string>();
+    coupons.forEach((c: any) => { if (c.tag) set.add(c.tag); });
+    return Array.from(set).sort();
+  }, [coupons]);
+
+  const filtered = useMemo(() => {
+    let arr = [...coupons];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter((c: any) =>
+        String(c.code ?? "").toLowerCase().includes(q) ||
+        String(c.title ?? "").toLowerCase().includes(q) ||
+        String(c.subtitle ?? "").toLowerCase().includes(q) ||
+        String(c.tag ?? "").toLowerCase().includes(q) ||
+        String(c.description ?? "").toLowerCase().includes(q)
+      );
+    }
+    if (filterStatus === "active")   arr = arr.filter((c: any) => c.show);
+    if (filterStatus === "inactive") arr = arr.filter((c: any) => !c.show);
+    if (filterTag !== "all")         arr = arr.filter((c: any) => c.tag === filterTag);
+
+    switch (sortBy) {
+      case "code-asc":   arr.sort((a, b) => String(a.code ?? "").localeCompare(String(b.code ?? ""))); break;
+      case "code-desc":  arr.sort((a, b) => String(b.code ?? "").localeCompare(String(a.code ?? ""))); break;
+      case "title-asc":  arr.sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? ""))); break;
+      case "title-desc": arr.sort((a, b) => String(b.title ?? "").localeCompare(String(a.title ?? ""))); break;
+      case "tag-asc":    arr.sort((a, b) => String(a.tag ?? "").localeCompare(String(b.tag ?? ""))); break;
+      case "tag-desc":   arr.sort((a, b) => String(b.tag ?? "").localeCompare(String(a.tag ?? ""))); break;
+    }
+    return arr;
+  }, [coupons, search, filterStatus, filterTag, sortBy]);
+
+  const hasFilters = search || filterStatus !== "all" || filterTag !== "all";
+
+  function clearFilters() { setSearch(""); setFilterStatus("all"); setFilterTag("all"); }
 
   const saveMutation = useMutation({
     mutationFn: (data: any) => data._id
@@ -1400,25 +1453,98 @@ function CouponsSection({ rid }: { rid: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-7">
-        <SectionTitle>Coupons</SectionTitle>
-        <Button onClick={() => { setForm(emptyForm); setAddOpen(true); }} className="bg-red-500 hover:bg-red-600 text-white rounded-xl" data-testid="button-add-coupon"><Plus className="w-4 h-4 mr-2" />Add Coupon</Button>
+        <SectionTitle subtitle={hasFilters ? `${filtered.length} of ${coupons.length} coupons` : `${coupons.length} coupons`}>Coupons</SectionTitle>
+        <div className="flex items-center gap-2">
+          <Select value={sortBy} onValueChange={v => setSortBy(v as CouponSortBy)}>
+            <SelectTrigger className="w-44 bg-white border-gray-200 rounded-xl shadow-sm" data-testid="select-coupon-sort">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {COUPON_SORT_OPTIONS.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => { setForm(emptyForm); setAddOpen(true); }} className="bg-red-500 hover:bg-red-600 text-white rounded-xl" data-testid="button-add-coupon">
+            <Plus className="w-4 h-4 mr-2" />Add Coupon
+          </Button>
+        </div>
       </div>
-      {coupons.length === 0 && (
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-3 mb-5 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        {/* Search */}
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+          <Input
+            className="pl-9 bg-gray-50 border-gray-200 rounded-xl"
+            placeholder="Search code, title, tag…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            data-testid="input-search-coupons"
+          />
+        </div>
+        {/* Status filter */}
+        <Select value={filterStatus} onValueChange={v => setFilterStatus(v as any)}>
+          <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl" data-testid="select-coupon-status">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Coupons</SelectItem>
+            <SelectItem value="active">Active Only</SelectItem>
+            <SelectItem value="inactive">Inactive Only</SelectItem>
+          </SelectContent>
+        </Select>
+        {/* Tag filter */}
+        {tags.length > 0 && (
+          <Select value={filterTag} onValueChange={setFilterTag}>
+            <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl" data-testid="select-coupon-tag">
+              <SelectValue placeholder="All Tags" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tags</SelectItem>
+              {tags.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {hasFilters && (
+          <Button variant="ghost" className="text-gray-400 hover:text-gray-600 rounded-xl px-3" onClick={clearFilters} data-testid="button-clear-coupon-filters">
+            <X className="w-4 h-4 mr-1" />Clear
+          </Button>
+        )}
+      </div>
+
+      {filtered.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Tag className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-gray-400 font-medium">No coupons found</p>
+          <p className="text-gray-400 font-medium">
+            {hasFilters ? "No coupons match your filters" : "No coupons found"}
+          </p>
+          {hasFilters && (
+            <button onClick={clearFilters} className="mt-2 text-sm text-red-500 hover:underline">Clear filters</button>
+          )}
         </div>
       )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {coupons.map((coupon: any) => (
-          <div key={String(coupon._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all">
-            <div className="h-1 bg-gradient-to-r from-red-400 to-orange-400" />
+        {filtered.map((coupon: any) => (
+          <div key={String(coupon._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all" data-testid={`card-coupon-${coupon._id}`}>
+            <div className={`h-1 bg-gradient-to-r ${coupon.show ? "from-red-400 to-orange-400" : "from-gray-300 to-gray-300"}`} />
             <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-mono text-xs">{coupon.code}</Badge>
                     {coupon.tag && <Badge variant="outline" className="text-xs">{coupon.tag}</Badge>}
+                    {!coupon.show && <Badge className="bg-gray-100 text-gray-500 border-gray-200 text-xs">Inactive</Badge>}
                   </div>
                   <p className="font-bold text-gray-900 mt-2">{coupon.title}</p>
                   <p className="text-sm text-gray-500">{coupon.subtitle}</p>
