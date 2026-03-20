@@ -206,6 +206,17 @@ router.get('/:restaurantId/smart-picks', authenticateAdmin, async (req, res) => 
   }
 });
 
+router.post('/:restaurantId/smart-picks', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    const doc = { ...req.body };
+    const result = await client.db('smartpicks').collection('smartpickscategorie').insertOne(doc);
+    res.json({ _id: result.insertedId, ...doc });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
 router.patch('/:restaurantId/smart-picks/:id', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
@@ -213,6 +224,16 @@ router.patch('/:restaurantId/smart-picks/:id', authenticateAdmin, async (req, re
       { _id: toObjectId(req.params.id) },
       { $set: req.body }
     );
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete('/:restaurantId/smart-picks/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('smartpicks').collection('smartpickscategorie').deleteOne({ _id: toObjectId(req.params.id) });
     res.json({ success: true });
   } catch (err: any) {
     res.status(err.status || 500).json({ message: err.message });

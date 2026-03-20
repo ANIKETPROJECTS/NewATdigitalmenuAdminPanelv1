@@ -1214,34 +1214,168 @@ function CategoriesSection({ rid }: { rid: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Smart Picks
 // ═══════════════════════════════════════════════════════════════════════════════
+const SMART_PICK_EMOJIS = [
+  "⭐","🍽️","👨‍🍳","🔥","💫","🌟","🥇","🎯","🍕","🍔","🍣","🍜","🍛","🥗",
+  "🍰","🧁","🍩","🥩","🍗","🦞","🍤","🥞","🧆","🌮","🥙","🍱","🫕","🍲",
+  "🥘","🫔","🌯","🥪","🍟","🍿","🧀","🥓","🍖","🫓","🧇","🥐","🥨","🍞",
+  "🫐","🍓","🍑","🥭","🍋","🍊","🍇","🍒","🥑","🌽","🥕","🧄","🧅","🥦",
+  "🫚","🧈","🍯","🧂","🫙","🥫","🍵","☕","🧃","🥤","🍹","🍸","🥂","🍾",
+];
+
+type SPSortBy = "order-asc" | "order-desc" | "name-asc" | "name-desc";
+type SPFilter  = "all" | "visible" | "hidden";
+
+const SP_SORT_OPTIONS: { value: SPSortBy; label: string }[] = [
+  { value: "order-asc",  label: "Order (Asc)"  },
+  { value: "order-desc", label: "Order (Desc)" },
+  { value: "name-asc",   label: "Name (A-Z)"   },
+  { value: "name-desc",  label: "Name (Z-A)"   },
+];
+
+const SP_EMPTY = { icon: "⭐", label: "", tagline: "", key: "", order: 1, isVisible: true };
+
+function EmojiPicker({ value, onChange }: { value: string; onChange: (e: string) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label>Emoji (logo)</Label>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center text-2xl border border-violet-100 flex-shrink-0">{value || "⭐"}</div>
+        <Input
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Type or paste an emoji…"
+          className="flex-1"
+          data-testid="input-smartpick-emoji"
+        />
+      </div>
+      <div className="grid grid-cols-10 gap-1 max-h-36 overflow-y-auto p-1 border rounded-xl bg-gray-50">
+        {SMART_PICK_EMOJIS.map(em => (
+          <button
+            key={em}
+            type="button"
+            onClick={() => onChange(em)}
+            className={`text-xl h-8 w-8 rounded-lg flex items-center justify-center hover:bg-violet-100 transition-colors ${value === em ? "bg-violet-200 ring-1 ring-violet-400" : ""}`}
+            data-testid={`button-emoji-${em}`}
+          >{em}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SmartPicksSection({ rid }: { rid: string }) {
   const { toast } = useToast();
+  const [addOpen, setAddOpen]       = useState(false);
+  const [editItem, setEditItem]     = useState<any>(null);
+  const [deleteConfirm, setDelete]  = useState<any>(null);
+  const [form, setForm]             = useState<any>(SP_EMPTY);
+  const [search, setSearch]         = useState("");
+  const [sortBy, setSortBy]         = useState<SPSortBy>("order-asc");
+  const [filter, setFilter]         = useState<SPFilter>("all");
+
   const { data: picks = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "smart-picks")],
     queryFn: () => apiRequest(api(rid, "smart-picks")),
   });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => apiRequest(api(rid, "smart-picks"), { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => { toast({ title: "Created" }); setAddOpen(false); setForm(SP_EMPTY); refetch(); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       apiRequest(`${api(rid, "smart-picks")}/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-    onSuccess: () => { toast({ title: "Updated" }); refetch(); },
+    onSuccess: () => { toast({ title: "Updated" }); setEditItem(null); refetch(); },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`${api(rid, "smart-picks")}/${id}`, { method: "DELETE" }),
+    onSuccess: () => { toast({ title: "Deleted" }); setDelete(null); refetch(); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const displayed = useMemo(() => {
+    let r = [...picks];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      r = r.filter(p => (p.label || "").toLowerCase().includes(q) || (p.key || "").toLowerCase().includes(q));
+    }
+    if (filter === "visible") r = r.filter(p => p.isVisible);
+    if (filter === "hidden")  r = r.filter(p => !p.isVisible);
+    r.sort((a, b) => {
+      if (sortBy === "order-asc")  return (a.order ?? 0) - (b.order ?? 0);
+      if (sortBy === "order-desc") return (b.order ?? 0) - (a.order ?? 0);
+      if (sortBy === "name-asc")   return (a.label || "").localeCompare(b.label || "");
+      if (sortBy === "name-desc")  return (b.label || "").localeCompare(a.label || "");
+      return 0;
+    });
+    return r;
+  }, [picks, search, sortBy, filter]);
+
+  function PickForm({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+    return (
+      <div className="space-y-3">
+        <EmojiPicker value={value.icon} onChange={em => onChange({ ...value, icon: em })} />
+        <div><Label>Label *</Label><Input value={value.label} onChange={e => onChange({ ...value, label: e.target.value })} placeholder="e.g. Today's Special" data-testid="input-smartpick-label" /></div>
+        <div><Label>Tagline</Label><Input value={value.tagline} onChange={e => onChange({ ...value, tagline: e.target.value })} placeholder="e.g. Tried and loved picks for today" data-testid="input-smartpick-tagline" /></div>
+        <div><Label>Key (slug)</Label><Input value={value.key} onChange={e => onChange({ ...value, key: e.target.value })} placeholder="e.g. todaysSpecial" data-testid="input-smartpick-key" /></div>
+        <div><Label>Order</Label><Input type="number" value={value.order} onChange={e => onChange({ ...value, order: parseInt(e.target.value) || 1 })} data-testid="input-smartpick-order" /></div>
+        <div className="flex items-center gap-3"><Switch checked={value.isVisible} onCheckedChange={v => onChange({ ...value, isVisible: v })} /><Label>Visible</Label></div>
+      </div>
+    );
+  }
 
   if (isLoading) return <LoadRow />;
 
   return (
     <div>
-      <SectionTitle subtitle="AI-powered curated picks for your customers">Smart Picks</SectionTitle>
-      {picks.length === 0 && (
+      <div className="flex items-center justify-between mb-5">
+        <SectionTitle subtitle="AI-powered curated picks for your customers">Smart Picks</SectionTitle>
+        <Button onClick={() => { setForm(SP_EMPTY); setAddOpen(true); }} className="bg-violet-500 hover:bg-violet-600 text-white rounded-xl" data-testid="button-add-smartpick">
+          <Plus className="w-4 h-4 mr-2" />Add Pick
+        </Button>
+      </div>
+
+      {/* Search / Sort / Filter toolbar */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input placeholder="Search by name or key…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 rounded-xl" data-testid="input-smartpick-search" />
+        </div>
+        <Select value={sortBy} onValueChange={v => setSortBy(v as SPSortBy)}>
+          <SelectTrigger className="w-40 rounded-xl" data-testid="select-smartpick-sort">
+            <ArrowUpDown className="w-4 h-4 mr-2 text-gray-400" /><SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {SP_SORT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filter} onValueChange={v => setFilter(v as SPFilter)}>
+          <SelectTrigger className="w-36 rounded-xl" data-testid="select-smartpick-filter">
+            <Filter className="w-4 h-4 mr-2 text-gray-400" /><SelectValue placeholder="Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="visible">Visible</SelectItem>
+            <SelectItem value="hidden">Hidden</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {displayed.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Sparkles className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-gray-400 font-medium">No smart picks found</p>
+          <p className="text-gray-400 font-medium">{picks.length === 0 ? "No smart picks found" : "No picks match your search"}</p>
         </div>
       )}
+
       <div className="space-y-3">
-        {picks.map((pick: any, idx: number) => (
+        {displayed.map((pick: any, idx: number) => (
           <div key={String(pick._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4" data-testid={`card-smartpick-${pick._id}`}>
-            <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-xl flex-shrink-0">{pick.icon}</div>
+            <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center text-2xl flex-shrink-0 border border-violet-100">{pick.icon || "⭐"}</div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900">{pick.label}</p>
               <p className="text-sm text-gray-500">{pick.tagline}</p>
@@ -1249,12 +1383,49 @@ function SmartPicksSection({ rid }: { rid: string }) {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Switch checked={pick.isVisible} onCheckedChange={v => updateMutation.mutate({ id: String(pick._id), data: { isVisible: v } })} data-testid={`switch-smartpick-${pick._id}`} />
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: Math.max(1, pick.order - 1) } })} disabled={idx === 0}><ChevronUp className="w-3 h-3" /></Button>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: pick.order + 1 } })} disabled={idx === picks.length - 1}><ChevronDown className="w-3 h-3" /></Button>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: Math.max(1, (pick.order ?? 1) - 1) } })} disabled={idx === 0}><ChevronUp className="w-3 h-3" /></Button>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: (pick.order ?? 1) + 1 } })} disabled={idx === displayed.length - 1}><ChevronDown className="w-3 h-3" /></Button>
+              <Button size="sm" variant="outline" className="h-7 px-2 rounded-lg text-xs" onClick={() => { setEditItem(pick); setForm({ icon: pick.icon || "⭐", label: pick.label, tagline: pick.tagline, key: pick.key, order: pick.order, isVisible: pick.isVisible }); }} data-testid={`button-edit-smartpick-${pick._id}`}><Edit className="w-3 h-3" /></Button>
+              <Button size="sm" variant="outline" className="h-7 px-2 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDelete(pick)} data-testid={`button-delete-smartpick-${pick._id}`}><Trash2 className="w-3 h-3" /></Button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Add dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Add Smart Pick</DialogTitle></DialogHeader>
+          <PickForm value={form} onChange={setForm} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button className="bg-violet-500 hover:bg-violet-600 text-white" onClick={() => createMutation.mutate(form)} disabled={createMutation.isPending}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editItem} onOpenChange={v => !v && setEditItem(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit Smart Pick</DialogTitle></DialogHeader>
+          <PickForm value={form} onChange={setForm} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button className="bg-violet-500 hover:bg-violet-600 text-white" onClick={() => updateMutation.mutate({ id: String(editItem._id), data: form })} disabled={updateMutation.isPending}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDelete(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Smart Pick</DialogTitle><DialogDescription>Delete "{deleteConfirm?.label}"? This cannot be undone.</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteMutation.mutate(String(deleteConfirm._id))} disabled={deleteMutation.isPending}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
