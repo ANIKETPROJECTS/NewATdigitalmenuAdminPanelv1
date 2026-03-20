@@ -1383,8 +1383,10 @@ function SmartPicksSection({ rid }: { rid: string }) {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Switch checked={pick.isVisible} onCheckedChange={v => updateMutation.mutate({ id: String(pick._id), data: { isVisible: v } })} data-testid={`switch-smartpick-${pick._id}`} />
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: Math.max(1, (pick.order ?? 1) - 1) } })} disabled={idx === 0}><ChevronUp className="w-3 h-3" /></Button>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: (pick.order ?? 1) + 1 } })} disabled={idx === displayed.length - 1}><ChevronDown className="w-3 h-3" /></Button>
+              <div className="flex flex-col gap-0.5">
+                <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: Math.max(1, (pick.order ?? 1) - 1) } })} disabled={idx === 0} data-testid={`button-moveup-smartpick-${pick._id}`}><ChevronUp className="w-3 h-3" />Up</Button>
+                <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(pick._id), data: { order: (pick.order ?? 1) + 1 } })} disabled={idx === displayed.length - 1} data-testid={`button-movedown-smartpick-${pick._id}`}><ChevronDown className="w-3 h-3" />Down</Button>
+              </div>
               <Button size="sm" variant="outline" className="h-7 px-2 rounded-lg text-xs" onClick={() => { setEditItem(pick); setForm({ icon: pick.icon || "⭐", label: pick.label, tagline: pick.tagline, key: pick.key, order: pick.order, isVisible: pick.isVisible }); }} data-testid={`button-edit-smartpick-${pick._id}`}><Edit className="w-3 h-3" /></Button>
               <Button size="sm" variant="outline" className="h-7 px-2 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDelete(pick)} data-testid={`button-delete-smartpick-${pick._id}`}><Trash2 className="w-3 h-3" /></Button>
             </div>
