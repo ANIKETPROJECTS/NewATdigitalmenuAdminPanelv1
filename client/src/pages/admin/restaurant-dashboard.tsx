@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ import {
   Download, Search, Plus, Edit, Trash2, RefreshCw, Eye, EyeOff, Save,
   Phone, Mail, Globe, MapPin, Instagram, Facebook, Youtube, Upload, Link,
   TrendingUp, Activity, Zap, Award, List, AlertCircle, CheckCircle2, FileDown, FileUp, SkipForward,
+  ArrowUpDown, Filter,
 } from "lucide-react";
 
 // ─── API base ─────────────────────────────────────────────────────────────────
@@ -507,13 +508,37 @@ function CascadingCategoryDropdown({
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Menu Items
+// ─── Menu filter / sort config ─────────────────────────────────────────────────
+type FilterMode = "all" | "veg" | "nonveg" | "available" | "unavailable" | "veg-available" | "nonveg-available";
+type SortBy = "recent" | "name-asc" | "name-desc" | "price-asc" | "price-desc" | "category-asc" | "category-desc";
+
+const FILTER_MODES: { value: FilterMode; label: string; vegParam: string | null; availParam: string | null }[] = [
+  { value: "all",             label: "All Items",               vegParam: null,    availParam: null    },
+  { value: "veg",             label: "Vegetarian",              vegParam: "true",  availParam: null    },
+  { value: "nonveg",          label: "Non-Vegetarian",          vegParam: "false", availParam: null    },
+  { value: "available",       label: "Available Items",         vegParam: null,    availParam: "true"  },
+  { value: "unavailable",     label: "Unavailable Items",       vegParam: null,    availParam: "false" },
+  { value: "veg-available",   label: "Vegetarian & Available",  vegParam: "true",  availParam: "true"  },
+  { value: "nonveg-available",label: "Non-Veg & Available",     vegParam: "false", availParam: "true"  },
+];
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: "recent",        label: "Recent First"      },
+  { value: "name-asc",      label: "Name (A-Z)"        },
+  { value: "name-desc",     label: "Name (Z-A)"        },
+  { value: "price-asc",     label: "Price (Low-High)"  },
+  { value: "price-desc",    label: "Price (High-Low)"  },
+  { value: "category-asc",  label: "Category (A-Z)"    },
+  { value: "category-desc", label: "Category (Z-A)"    },
+];
+
 // ═══════════════════════════════════════════════════════════════════════════════
 function MenuItemsSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [filterVeg, setFilterVeg] = useState<"all" | "veg" | "nonveg">("all");
-  const [showAvailable, setShowAvailable] = useState<"all" | "true" | "false">("all");
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("recent");
   const [editItem, setEditItem] = useState<any>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
@@ -531,17 +556,30 @@ function MenuItemsSection({ rid }: { rid: string }) {
     queryFn: () => apiRequest(api(rid, "categories")),
   });
 
+  const filterDef = FILTER_MODES.find(f => f.value === filterMode)!;
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (category !== "all") params.set("category", category);
-  if (filterVeg === "veg") params.set("isVeg", "true");
-  if (filterVeg === "nonveg") params.set("isVeg", "false");
-  if (showAvailable !== "all") params.set("isAvailable", showAvailable);
+  if (filterDef.vegParam) params.set("isVeg", filterDef.vegParam);
+  if (filterDef.availParam) params.set("isAvailable", filterDef.availParam);
 
   const { data: items = [], isLoading, refetch } = useQuery<any[]>({
-    queryKey: [api(rid, "menu-items"), search, category, filterVeg, showAvailable],
+    queryKey: [api(rid, "menu-items"), search, category, filterMode],
     queryFn: () => apiRequest(`${api(rid, "menu-items")}?${params}`),
   });
+
+  const sortedItems = useMemo(() => {
+    const arr = [...items];
+    switch (sortBy) {
+      case "name-asc":      return arr.sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+      case "name-desc":     return arr.sort((a, b) => String(b.name ?? "").localeCompare(String(a.name ?? "")));
+      case "price-asc":     return arr.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
+      case "price-desc":    return arr.sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0));
+      case "category-asc":  return arr.sort((a, b) => String(a.category ?? "").localeCompare(String(b.category ?? "")));
+      case "category-desc": return arr.sort((a, b) => String(b.category ?? "").localeCompare(String(a.category ?? "")));
+      default:              return arr;
+    }
+  }, [items, sortBy]);
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, col, patch }: { id: string; col: string; patch: any }) =>
@@ -586,8 +624,8 @@ function MenuItemsSection({ rid }: { rid: string }) {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   function handleExport() {
-    if (!items.length) {
-      const hasFilters = category !== "all" || filterVeg !== "all" || showAvailable !== "all" || search;
+    if (!sortedItems.length) {
+      const hasFilters = category !== "all" || filterMode !== "all" || search;
       toast({
         title: "Nothing to export",
         description: hasFilters
@@ -598,7 +636,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
       return;
     }
     try {
-      const rows = items.map((item: any) => ({
+      const rows = sortedItems.map((item: any) => ({
         name: item.name ?? "",
         description: item.description ?? "",
         price: item.price ?? "",
@@ -615,10 +653,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
 
       const filterParts: string[] = [];
       if (category !== "all") filterParts.push(category);
-      if (filterVeg === "veg") filterParts.push("veg");
-      if (filterVeg === "nonveg") filterParts.push("nonveg");
-      if (showAvailable === "true") filterParts.push("available");
-      if (showAvailable === "false") filterParts.push("unavailable");
+      if (filterMode !== "all") filterParts.push(filterMode);
       if (search) filterParts.push(search.replace(/\s+/g, "-").toLowerCase());
       const fileSuffix = filterParts.length ? `-${filterParts.join("-")}` : "";
 
@@ -627,7 +662,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
       XLSX.utils.book_append_sheet(wb, ws, "Menu Items");
       XLSX.writeFile(wb, `menu-export${fileSuffix}-${Date.now()}.xlsx`);
 
-      const hasFilters = category !== "all" || filterVeg !== "all" || showAvailable !== "all" || search;
+      const hasFilters = category !== "all" || filterMode !== "all" || search;
       toast({
         title: "Exported successfully",
         description: hasFilters
@@ -787,7 +822,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-7">
-        <SectionTitle subtitle={`${items.length} items found`}>Menu Items</SectionTitle>
+        <SectionTitle subtitle={`${sortedItems.length} items found`}>Menu Items</SectionTitle>
         <div className="flex items-center gap-3">
           {/* Grid / List toggle */}
           <div className="flex items-center bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
@@ -855,20 +890,32 @@ function MenuItemsSection({ rid }: { rid: string }) {
           categories={categoryTree}
           collections={collections}
         />
-        <Select value={filterVeg} onValueChange={v => setFilterVeg(v as any)}>
-          <SelectTrigger className="w-36 bg-gray-50 border-gray-200 rounded-xl"><SelectValue /></SelectTrigger>
+        {/* Combined Filter dropdown */}
+        <Select value={filterMode} onValueChange={v => setFilterMode(v as FilterMode)}>
+          <SelectTrigger className="w-52 bg-gray-50 border-gray-200 rounded-xl" data-testid="select-filter-mode">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <SelectValue />
+            </div>
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="veg">Veg Only</SelectItem>
-            <SelectItem value="nonveg">Non-Veg</SelectItem>
+            {FILTER_MODES.map(f => (
+              <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Select value={showAvailable} onValueChange={v => setShowAvailable(v as any)}>
-          <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl"><SelectValue /></SelectTrigger>
+        {/* Sort dropdown */}
+        <Select value={sortBy} onValueChange={v => setSortBy(v as SortBy)}>
+          <SelectTrigger className="w-48 bg-gray-50 border-gray-200 rounded-xl" data-testid="select-sort-by">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <SelectValue />
+            </div>
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="true">Available</SelectItem>
-            <SelectItem value="false">Unavailable</SelectItem>
+            {SORT_OPTIONS.map(s => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <div className="relative flex-1 min-w-48">
@@ -879,7 +926,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
 
       {isLoading ? <LoadRow /> : (
         <>
-          {items.length === 0 && (
+          {sortedItems.length === 0 && (
             <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
               <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 text-gray-200" />
               <p className="text-gray-400 font-medium">No menu items found</p>
@@ -889,7 +936,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
           {/* ── LIST VIEW ── */}
           {viewMode === "list" && (
             <div className="space-y-3">
-              {items.map((item: any) => (
+              {sortedItems.map((item: any) => (
                 <div key={String(item._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-4 flex items-center gap-4" data-testid={`row-menu-item-${item._id}`}>
                   {item.image
                     ? <img src={item.image} alt={item.name} className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-gray-100" onError={e => { (e.target as any).style.display = "none"; }} />
@@ -920,7 +967,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
           {/* ── GRID VIEW ── */}
           {viewMode === "grid" && (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {items.map((item: any) => (
+              {sortedItems.map((item: any) => (
                 <div key={String(item._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group" data-testid={`card-menu-item-${item._id}`}>
                   {/* Image */}
                   <div className="relative h-40 bg-gray-100 overflow-hidden">
