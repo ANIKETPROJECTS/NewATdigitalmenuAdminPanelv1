@@ -1375,7 +1375,10 @@ function SmartPicksSection({ rid }: { rid: string }) {
       <div className="space-y-3">
         {displayed.map((pick: any, idx: number) => (
           <div key={String(pick._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4" data-testid={`card-smartpick-${pick._id}`}>
-            <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center text-2xl flex-shrink-0 border border-violet-100">{pick.icon || "⭐"}</div>
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <span className="text-[10px] font-bold text-violet-500 bg-violet-50 border border-violet-100 rounded-md px-1.5 py-0.5 leading-none" data-testid={`text-position-smartpick-${pick._id}`}>#{idx + 1}</span>
+              <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center text-2xl border border-violet-100">{pick.icon || "⭐"}</div>
+            </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900">{pick.label}</p>
               <p className="text-sm text-gray-500">{pick.tagline}</p>
