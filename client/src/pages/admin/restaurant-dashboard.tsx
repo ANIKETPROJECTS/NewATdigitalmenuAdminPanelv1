@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -25,7 +26,7 @@ import {
   ArrowLeft, Menu, X, ChevronRight, ChevronDown, ChevronUp, Leaf, Star,
   Download, Search, Plus, Edit, Trash2, RefreshCw, Eye, EyeOff, Save,
   Phone, Mail, Globe, MapPin, Instagram, Facebook, Youtube, Upload, Link,
-  TrendingUp, Activity, Zap, Award, List,
+  TrendingUp, Activity, Zap, Award, List, AlertCircle, CheckCircle2, FileDown, FileUp, SkipForward,
 } from "lucide-react";
 
 // ─── API base ─────────────────────────────────────────────────────────────────
@@ -576,6 +577,130 @@ function MenuItemsSection({ rid }: { rid: string }) {
 
   const [imgUploading, setImgUploading] = useState(false);
 
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResults, setImportResults] = useState<{
+    imported: string[];
+    skipped: string[];
+    failed: { name: string; reason: string }[];
+  } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  function handleExport() {
+    if (!items.length) {
+      toast({ title: "Nothing to export", description: "There are no menu items to export.", variant: "destructive" });
+      return;
+    }
+    try {
+      const rows = items.map((item: any) => ({
+        name: item.name ?? "",
+        description: item.description ?? "",
+        price: item.price ?? "",
+        category: item.category ?? "",
+        isVeg: item.isVeg ? "true" : "false",
+        isAvailable: item.isAvailable ? "true" : "false",
+        todaysSpecial: item.todaysSpecial ? "true" : "false",
+        chefSpecial: item.chefSpecial ? "true" : "false",
+        preparationTime: item.preparationTime ?? "",
+        allergens: Array.isArray(item.allergens) ? item.allergens.join(", ") : (item.allergens ?? ""),
+        ingredients: Array.isArray(item.ingredients) ? item.ingredients.join(", ") : (item.ingredients ?? ""),
+        image: item.image ?? "",
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Menu Items");
+      XLSX.writeFile(wb, `menu-export-${Date.now()}.xlsx`);
+      toast({ title: "Exported successfully", description: `${rows.length} items exported to Excel.` });
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e.message || "Could not export menu items.", variant: "destructive" });
+    }
+  }
+
+  async function handleImportFile(file: File) {
+    setImportLoading(true);
+    const importedNames: string[] = [];
+    const skippedNames: string[] = [];
+    const failedItems: { name: string; reason: string }[] = [];
+
+    try {
+      let rows: any[] = [];
+
+      if (file.name.endsWith(".json")) {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        rows = Array.isArray(parsed) ? parsed : [];
+      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        const buffer = await file.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws);
+      } else {
+        toast({ title: "Unsupported file", description: "Please upload a .xlsx, .xls, or .json file.", variant: "destructive" });
+        setImportLoading(false);
+        return;
+      }
+
+      if (!rows.length) {
+        toast({ title: "Empty file", description: "The file contains no data to import.", variant: "destructive" });
+        setImportLoading(false);
+        return;
+      }
+
+      const existingSet = new Set(
+        items.map((item: any) => `${String(item.name ?? "").toLowerCase().trim()}|${String(item.category ?? "").toLowerCase().trim()}`)
+      );
+
+      for (const row of rows) {
+        const name = String(row.name ?? "").trim();
+        const category = String(row.category ?? "").trim();
+
+        if (!name) {
+          failedItems.push({ name: row.name ?? "(unnamed)", reason: "Missing item name." });
+          continue;
+        }
+
+        const key = `${name.toLowerCase()}|${category.toLowerCase()}`;
+        if (existingSet.has(key)) {
+          skippedNames.push(name);
+          continue;
+        }
+
+        try {
+          const body = {
+            name,
+            description: String(row.description ?? ""),
+            price: isNaN(Number(row.price)) ? String(row.price ?? "") : Number(row.price),
+            category,
+            isVeg: String(row.isVeg ?? "false").toLowerCase() === "true",
+            isAvailable: String(row.isAvailable ?? "true").toLowerCase() !== "false",
+            todaysSpecial: String(row.todaysSpecial ?? "false").toLowerCase() === "true",
+            chefSpecial: String(row.chefSpecial ?? "false").toLowerCase() === "true",
+            preparationTime: String(row.preparationTime ?? ""),
+            allergens: typeof row.allergens === "string"
+              ? row.allergens.split(",").map((s: string) => s.trim()).filter(Boolean)
+              : [],
+            ingredients: typeof row.ingredients === "string"
+              ? row.ingredients.split(",").map((s: string) => s.trim()).filter(Boolean)
+              : [],
+            image: String(row.image ?? ""),
+          };
+          await apiRequest(api(rid, "menu-items"), { method: "POST", body: JSON.stringify(body) });
+          importedNames.push(name);
+          existingSet.add(key);
+        } catch (e: any) {
+          failedItems.push({ name, reason: e.message || "Server error while saving item." });
+        }
+      }
+
+      await refetch();
+      setImportResults({ imported: importedNames, skipped: skippedNames, failed: failedItems });
+    } catch (e: any) {
+      toast({ title: "Import failed", description: e.message || "Could not read the file. Please check the format.", variant: "destructive" });
+    } finally {
+      setImportLoading(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  }
+
   async function handleImageFileUpload(file: File) {
     setImgUploading(true);
     try {
@@ -667,6 +792,32 @@ function MenuItemsSection({ rid }: { rid: string }) {
               <span className="hidden sm:inline">Grid</span>
             </button>
           </div>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,.xls,.json"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleImportFile(f); }}
+            data-testid="input-import-file"
+          />
+          <Button
+            variant="outline"
+            className="rounded-xl border-gray-200 shadow-sm hover:bg-gray-50"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importLoading}
+            data-testid="button-import-menu"
+          >
+            {importLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <FileUp className="w-4 h-4 mr-2" />}
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl border-gray-200 shadow-sm hover:bg-gray-50"
+            onClick={handleExport}
+            data-testid="button-export-menu"
+          >
+            <FileDown className="w-4 h-4 mr-2" />Export
+          </Button>
           <Button onClick={() => { setForm(emptyForm); setAddOpen(true); }} className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-sm" data-testid="button-add-menu-item">
             <Plus className="w-4 h-4 mr-2" />Add Item
           </Button>
@@ -835,6 +986,83 @@ function MenuItemsSection({ rid }: { rid: string }) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => deleteMutation.mutate({ id: String(deleteConfirm._id), col: deleteConfirm.category })} disabled={deleteMutation.isPending}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Results Dialog */}
+      <Dialog open={!!importResults} onOpenChange={v => !v && setImportResults(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <FileUp className="w-5 h-5 text-amber-500" />
+              Import Results
+            </DialogTitle>
+            <DialogDescription>
+              Here's a summary of what happened during the import.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Imported */}
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="font-semibold text-emerald-800 text-sm">
+                  {importResults?.imported.length ?? 0} item{(importResults?.imported.length ?? 0) !== 1 ? "s" : ""} imported successfully
+                </span>
+              </div>
+              {(importResults?.imported.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {importResults!.imported.map((name, i) => (
+                    <span key={i} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{name}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Skipped */}
+            <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <SkipForward className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span className="font-semibold text-amber-800 text-sm">
+                  {importResults?.skipped.length ?? 0} item{(importResults?.skipped.length ?? 0) !== 1 ? "s" : ""} skipped (already exist)
+                </span>
+              </div>
+              {(importResults?.skipped.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {importResults!.skipped.map((name, i) => (
+                    <span key={i} className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{name}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Failed */}
+            {(importResults?.failed.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  <span className="font-semibold text-red-800 text-sm">
+                    {importResults!.failed.length} item{importResults!.failed.length !== 1 ? "s" : ""} failed to import
+                  </span>
+                </div>
+                <div className="space-y-2 mt-2">
+                  {importResults!.failed.map((f, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs bg-red-100 text-red-700 rounded-lg px-3 py-2">
+                      <span className="font-semibold flex-shrink-0">{f.name}:</span>
+                      <span className="text-red-600">{f.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl" onClick={() => setImportResults(null)} data-testid="button-close-import-results">
+              Done
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
