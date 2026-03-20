@@ -587,7 +587,14 @@ function MenuItemsSection({ rid }: { rid: string }) {
 
   function handleExport() {
     if (!items.length) {
-      toast({ title: "Nothing to export", description: "There are no menu items to export.", variant: "destructive" });
+      const hasFilters = category !== "all" || filterVeg !== "all" || showAvailable !== "all" || search;
+      toast({
+        title: "Nothing to export",
+        description: hasFilters
+          ? "No items match your current filters. Try adjusting or clearing the filters."
+          : "There are no menu items to export.",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -605,11 +612,28 @@ function MenuItemsSection({ rid }: { rid: string }) {
         ingredients: Array.isArray(item.ingredients) ? item.ingredients.join(", ") : (item.ingredients ?? ""),
         image: item.image ?? "",
       }));
+
+      const filterParts: string[] = [];
+      if (category !== "all") filterParts.push(category);
+      if (filterVeg === "veg") filterParts.push("veg");
+      if (filterVeg === "nonveg") filterParts.push("nonveg");
+      if (showAvailable === "true") filterParts.push("available");
+      if (showAvailable === "false") filterParts.push("unavailable");
+      if (search) filterParts.push(search.replace(/\s+/g, "-").toLowerCase());
+      const fileSuffix = filterParts.length ? `-${filterParts.join("-")}` : "";
+
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Menu Items");
-      XLSX.writeFile(wb, `menu-export-${Date.now()}.xlsx`);
-      toast({ title: "Exported successfully", description: `${rows.length} items exported to Excel.` });
+      XLSX.writeFile(wb, `menu-export${fileSuffix}-${Date.now()}.xlsx`);
+
+      const hasFilters = category !== "all" || filterVeg !== "all" || showAvailable !== "all" || search;
+      toast({
+        title: "Exported successfully",
+        description: hasFilters
+          ? `${rows.length} filtered item${rows.length !== 1 ? "s" : ""} exported to Excel.`
+          : `All ${rows.length} item${rows.length !== 1 ? "s" : ""} exported to Excel.`,
+      });
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message || "Could not export menu items.", variant: "destructive" });
     }
