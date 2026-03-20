@@ -1339,6 +1339,7 @@ function CategoriesSection({ rid }: { rid: string }) {
   const [editCat, setEditCat]       = useState<any>(null);
   const [deleteCat, setDeleteCat]   = useState<any>(null);
   const [catForm, setCatForm]       = useState<any>(CAT_EMPTY);
+  const [viewMode, setViewMode]     = useState<"list" | "grid">("list");
 
   const { data: categories = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "categories")],
@@ -1436,6 +1437,25 @@ function CategoriesSection({ rid }: { rid: string }) {
             <SelectItem value="hidden">Hidden</SelectItem>
           </SelectContent>
         </Select>
+        {/* View mode toggle */}
+        <div className="flex items-center rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "list" ? "bg-emerald-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-view-list"
+          >
+            <List className="w-4 h-4" />
+            <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "grid" ? "bg-emerald-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-view-grid"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span className="hidden sm:inline">Grid</span>
+          </button>
+        </div>
       </div>
 
       {displayed.length === 0 && (
@@ -1445,61 +1465,98 @@ function CategoriesSection({ rid }: { rid: string }) {
         </div>
       )}
 
-      <div className="space-y-3">
-        {displayed.map((cat: any, idx: number) => (
-          <div key={String(cat._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid={`card-category-${cat._id}`}>
-            <div className="p-4 flex items-center gap-3">
-              {/* Position badge + image */}
-              <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none" data-testid={`text-position-cat-${cat._id}`}>#{idx + 1}</span>
-                {cat.image
-                  ? <img src={cat.image} alt={cat.title} className="w-10 h-10 rounded-xl object-cover border border-gray-100" onError={e => { (e.target as any).style.display = "none"; }} />
-                  : <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center"><LayoutGrid className="w-4 h-4 text-emerald-400" /></div>
-                }
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900">{cat.title}</p>
-                <p className="text-xs text-gray-400">Order: {cat.order} · {cat.subcategories?.length || 0} subcategories</p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-${cat._id}`} />
-                <div className="flex flex-col gap-0.5">
-                  <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: Math.max(1, cat.order - 1) } })} disabled={idx === 0} data-testid={`button-moveup-cat-${cat._id}`}><ChevronUp className="w-3 h-3" />Up</Button>
-                  <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: cat.order + 1 } })} disabled={idx === displayed.length - 1} data-testid={`button-movedown-cat-${cat._id}`}><ChevronDown className="w-3 h-3" />Down</Button>
+      {/* ── LIST VIEW ─────────────────────────────────────────────────────── */}
+      {viewMode === "list" && (
+        <div className="space-y-3">
+          {displayed.map((cat: any, idx: number) => (
+            <div key={String(cat._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid={`card-category-${cat._id}`}>
+              <div className="p-4 flex items-center gap-3">
+                {/* Position badge + image */}
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none" data-testid={`text-position-cat-${cat._id}`}>#{idx + 1}</span>
+                  {cat.image
+                    ? <img src={cat.image} alt={cat.title} className="w-10 h-10 rounded-xl object-cover border border-gray-100" onError={e => { (e.target as any).style.display = "none"; }} />
+                    : <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center"><LayoutGrid className="w-4 h-4 text-emerald-400" /></div>
+                  }
                 </div>
-                {/* Add subcategory to top level */}
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                  title="Add subcategory"
-                  onClick={() => {
-                    setExpanded(prev => { const s = new Set(prev); s.add(String(cat._id)); return s; });
-                  }}
-                  data-testid={`button-addsub-cat-${cat._id}`}
-                ><Plus className="w-3 h-3" /></Button>
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-${cat._id}`}><Edit className="w-3 h-3" /></Button>
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => toggleExpand(String(cat._id))} data-testid={`button-expand-cat-${cat._id}`}>{expanded.has(String(cat._id)) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</Button>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900">{cat.title}</p>
+                  <p className="text-xs text-gray-400">Order: {cat.order} · {cat.subcategories?.length || 0} subcategories</p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-${cat._id}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: Math.max(1, cat.order - 1) } })} disabled={idx === 0} data-testid={`button-moveup-cat-${cat._id}`}><ChevronUp className="w-3 h-3" />Up</Button>
+                    <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: cat.order + 1 } })} disabled={idx === displayed.length - 1} data-testid={`button-movedown-cat-${cat._id}`}><ChevronDown className="w-3 h-3" />Down</Button>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                    title="Add subcategory"
+                    onClick={() => { setExpanded(prev => { const s = new Set(prev); s.add(String(cat._id)); return s; }); }}
+                    data-testid={`button-addsub-cat-${cat._id}`}
+                  ><Plus className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-${cat._id}`}><Edit className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => toggleExpand(String(cat._id))} data-testid={`button-expand-cat-${cat._id}`}>{expanded.has(String(cat._id)) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</Button>
+                </div>
+              </div>
+
+              {expanded.has(String(cat._id)) && (
+                <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-2">
+                  <SubcatTree subcats={cat.subcategories || []} depth={0} onUpdate={newSubcats => handleSubcatUpdate(cat, newSubcats)} />
+                  <AddSubcatInline onAdd={item => handleSubcatUpdate(cat, [...(cat.subcategories || []), item])} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── GRID VIEW ─────────────────────────────────────────────────────── */}
+      {viewMode === "grid" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {displayed.map((cat: any, idx: number) => (
+            <div key={String(cat._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group" data-testid={`card-category-grid-${cat._id}`}>
+              {/* Image area */}
+              <div className="relative">
+                {cat.image
+                  ? <img src={cat.image} alt={cat.title} className="w-full h-28 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
+                  : <div className="w-full h-28 bg-emerald-50 flex items-center justify-center"><LayoutGrid className="w-8 h-8 text-emerald-300" /></div>
+                }
+                {/* Position badge */}
+                <span className="absolute top-2 left-2 text-[10px] font-bold text-emerald-700 bg-white/90 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none shadow-sm">
+                  #{idx + 1}
+                </span>
+                {/* Visible badge */}
+                <span className={`absolute top-2 right-2 text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${cat.visible ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+                  {cat.visible ? "ON" : "OFF"}
+                </span>
+              </div>
+
+              {/* Info */}
+              <div className="p-3 flex-1 flex flex-col gap-1">
+                <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{cat.title}</p>
+                <p className="text-xs text-gray-400">{cat.subcategories?.length || 0} subcategories</p>
+              </div>
+
+              {/* Actions */}
+              <div className="px-3 pb-3 flex items-center justify-between gap-1">
+                <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-grid-${cat._id}`} />
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                    title="Add subcategory"
+                    onClick={() => { setViewMode("list"); setTimeout(() => setExpanded(prev => { const s = new Set(prev); s.add(String(cat._id)); return s; }), 50); }}
+                    data-testid={`button-addsub-cat-grid-${cat._id}`}
+                  ><Plus className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-grid-${cat._id}`}><Edit className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-grid-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
+                </div>
               </div>
             </div>
-
-            {/* Expanded: recursive subcategory tree */}
-            {expanded.has(String(cat._id)) && (
-              <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-2">
-                <SubcatTree
-                  subcats={cat.subcategories || []}
-                  depth={0}
-                  onUpdate={newSubcats => handleSubcatUpdate(cat, newSubcats)}
-                />
-                {/* Quick add top-level subcategory */}
-                <AddSubcatInline
-                  onAdd={item => handleSubcatUpdate(cat, [...(cat.subcategories || []), item])}
-                />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Add category dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
