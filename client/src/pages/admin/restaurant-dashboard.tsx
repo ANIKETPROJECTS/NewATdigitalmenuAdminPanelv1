@@ -1144,9 +1144,24 @@ function MenuItemsSection({ rid }: { rid: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Categories
 // ═══════════════════════════════════════════════════════════════════════════════
+type CatSortBy = "order-asc" | "order-desc" | "name-asc" | "name-desc" | "subcats-asc" | "subcats-desc";
+type CatFilter  = "all" | "visible" | "hidden";
+
+const CAT_SORT_OPTIONS: { value: CatSortBy; label: string }[] = [
+  { value: "order-asc",    label: "Order (Asc)"       },
+  { value: "order-desc",   label: "Order (Desc)"      },
+  { value: "name-asc",     label: "Name (A-Z)"        },
+  { value: "name-desc",    label: "Name (Z-A)"        },
+  { value: "subcats-asc",  label: "Subcategories ↑"   },
+  { value: "subcats-desc", label: "Subcategories ↓"   },
+];
+
 function CategoriesSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch]     = useState("");
+  const [sortBy, setSortBy]     = useState<CatSortBy>("order-asc");
+  const [filter, setFilter]     = useState<CatFilter>("all");
 
   const { data: categories = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "categories")],
@@ -1164,31 +1179,87 @@ function CategoriesSection({ rid }: { rid: string }) {
     setExpanded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
 
+  const displayed = useMemo(() => {
+    let r = [...categories];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      r = r.filter(c => (c.title || "").toLowerCase().includes(q));
+    }
+    if (filter === "visible") r = r.filter(c => c.visible);
+    if (filter === "hidden")  r = r.filter(c => !c.visible);
+    r.sort((a, b) => {
+      if (sortBy === "order-asc")    return (a.order ?? 0) - (b.order ?? 0);
+      if (sortBy === "order-desc")   return (b.order ?? 0) - (a.order ?? 0);
+      if (sortBy === "name-asc")     return (a.title || "").localeCompare(b.title || "");
+      if (sortBy === "name-desc")    return (b.title || "").localeCompare(a.title || "");
+      if (sortBy === "subcats-asc")  return (a.subcategories?.length || 0) - (b.subcategories?.length || 0);
+      if (sortBy === "subcats-desc") return (b.subcategories?.length || 0) - (a.subcategories?.length || 0);
+      return 0;
+    });
+    return r;
+  }, [categories, search, sortBy, filter]);
+
   if (isLoading) return <LoadRow />;
 
   return (
     <div>
       <SectionTitle>Categories</SectionTitle>
-      {categories.length === 0 && (
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input placeholder="Search by name…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 rounded-xl" data-testid="input-category-search" />
+        </div>
+        <Select value={sortBy} onValueChange={v => setSortBy(v as CatSortBy)}>
+          <SelectTrigger className="w-44 rounded-xl" data-testid="select-category-sort">
+            <ArrowUpDown className="w-4 h-4 mr-2 text-gray-400" /><SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {CAT_SORT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filter} onValueChange={v => setFilter(v as CatFilter)}>
+          <SelectTrigger className="w-36 rounded-xl" data-testid="select-category-filter">
+            <Filter className="w-4 h-4 mr-2 text-gray-400" /><SelectValue placeholder="Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="visible">Visible</SelectItem>
+            <SelectItem value="hidden">Hidden</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {displayed.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <LayoutGrid className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-gray-400 font-medium">No categories found</p>
+          <p className="text-gray-400 font-medium">{categories.length === 0 ? "No categories found" : "No categories match your search"}</p>
         </div>
       )}
       <div className="space-y-3">
-        {categories.map((cat: any, idx: number) => (
+        {displayed.map((cat: any, idx: number) => (
           <div key={String(cat._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" data-testid={`card-category-${cat._id}`}>
             <div className="p-4 flex items-center gap-3">
-              {cat.image && <img src={cat.image} alt={cat.title} className="w-10 h-10 rounded-xl object-cover border border-gray-100 flex-shrink-0" onError={e => { (e.target as any).style.display = "none"; }} />}
+              {/* Position badge + image */}
+              <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none" data-testid={`text-position-cat-${cat._id}`}>#{idx + 1}</span>
+                {cat.image
+                  ? <img src={cat.image} alt={cat.title} className="w-10 h-10 rounded-xl object-cover border border-gray-100" onError={e => { (e.target as any).style.display = "none"; }} />
+                  : <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center"><LayoutGrid className="w-4 h-4 text-emerald-400" /></div>
+                }
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900">{cat.title}</p>
                 <p className="text-xs text-gray-400">Order: {cat.order} · {cat.subcategories?.length || 0} subcategories</p>
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-${cat._id}`} />
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: Math.max(1, cat.order - 1) } })} disabled={idx === 0}><ChevronUp className="w-3 h-3" /></Button>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: cat.order + 1 } })} disabled={idx === categories.length - 1}><ChevronDown className="w-3 h-3" /></Button>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => toggleExpand(String(cat._id))}>{expanded.has(String(cat._id)) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</Button>
+                <div className="flex flex-col gap-0.5">
+                  <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: Math.max(1, cat.order - 1) } })} disabled={idx === 0} data-testid={`button-moveup-cat-${cat._id}`}><ChevronUp className="w-3 h-3" />Up</Button>
+                  <Button size="sm" variant="outline" className="h-6 px-2 rounded-md text-[10px] font-medium gap-0.5 leading-none" onClick={() => updateMutation.mutate({ id: String(cat._id), data: { order: cat.order + 1 } })} disabled={idx === displayed.length - 1} data-testid={`button-movedown-cat-${cat._id}`}><ChevronDown className="w-3 h-3" />Down</Button>
+                </div>
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg" onClick={() => toggleExpand(String(cat._id))} data-testid={`button-expand-cat-${cat._id}`}>{expanded.has(String(cat._id)) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</Button>
               </div>
             </div>
             {expanded.has(String(cat._id)) && cat.subcategories?.length > 0 && (
