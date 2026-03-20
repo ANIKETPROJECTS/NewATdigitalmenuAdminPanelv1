@@ -1542,61 +1542,221 @@ function CustomersSection({ rid }: { rid: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Reservations
 // ═══════════════════════════════════════════════════════════════════════════════
-function ReservationsSection({ rid }: { rid: string }) {
-  const [date, setDate] = useState("");
+type ResSortBy =
+  | "date-desc" | "date-asc"
+  | "name-asc"  | "name-desc"
+  | "guests-desc" | "guests-asc"
+  | "booked-desc" | "booked-asc";
 
-  const params = new URLSearchParams();
-  if (date) params.set("date", date);
+const RES_SORT_OPTIONS: { value: ResSortBy; label: string }[] = [
+  { value: "date-desc",   label: "Reservation Date (Newest)" },
+  { value: "date-asc",    label: "Reservation Date (Oldest)" },
+  { value: "name-asc",    label: "Name (A-Z)"                },
+  { value: "name-desc",   label: "Name (Z-A)"                },
+  { value: "guests-desc", label: "Guests (High-Low)"         },
+  { value: "guests-asc",  label: "Guests (Low-High)"         },
+  { value: "booked-desc", label: "Booked At (Newest)"        },
+  { value: "booked-asc",  label: "Booked At (Oldest)"        },
+];
+
+function ReservationsSection({ rid }: { rid: string }) {
+  const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [filterOccasion, setFilterOccasion] = useState("all");
+  const [filterGuests, setFilterGuests] = useState("all");
+  const [sortBy, setSortBy] = useState<ResSortBy>("date-desc");
 
   const { data: reservations = [], isLoading } = useQuery<any[]>({
-    queryKey: [api(rid, "reservations"), date],
-    queryFn: () => apiRequest(`${api(rid, "reservations")}?${params}`),
+    queryKey: [api(rid, "reservations")],
+    queryFn: () => apiRequest(api(rid, "reservations")),
   });
+
+  const occasions = useMemo(() => {
+    const set = new Set<string>();
+    reservations.forEach((r: any) => { if (r.occasion) set.add(r.occasion); });
+    return Array.from(set).sort();
+  }, [reservations]);
+
+  const filtered = useMemo(() => {
+    let arr = [...reservations];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter((r: any) =>
+        String(r.name ?? "").toLowerCase().includes(q) ||
+        String(r.phone ?? "").toLowerCase().includes(q) ||
+        String(r.occasion ?? "").toLowerCase().includes(q) ||
+        String(r.email ?? "").toLowerCase().includes(q)
+      );
+    }
+    if (fromDate) arr = arr.filter((r: any) => r.date >= fromDate);
+    if (toDate)   arr = arr.filter((r: any) => r.date <= toDate);
+    if (filterOccasion !== "all") arr = arr.filter((r: any) => r.occasion === filterOccasion);
+    if (filterGuests === "1-2")   arr = arr.filter((r: any) => Number(r.guests) <= 2);
+    if (filterGuests === "3-5")   arr = arr.filter((r: any) => Number(r.guests) >= 3 && Number(r.guests) <= 5);
+    if (filterGuests === "6-10")  arr = arr.filter((r: any) => Number(r.guests) >= 6 && Number(r.guests) <= 10);
+    if (filterGuests === "10+")   arr = arr.filter((r: any) => Number(r.guests) > 10);
+
+    switch (sortBy) {
+      case "date-asc":    arr.sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? ""))); break;
+      case "date-desc":   arr.sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? ""))); break;
+      case "name-asc":    arr.sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? ""))); break;
+      case "name-desc":   arr.sort((a, b) => String(b.name ?? "").localeCompare(String(a.name ?? ""))); break;
+      case "guests-asc":  arr.sort((a, b) => Number(a.guests ?? 0) - Number(b.guests ?? 0)); break;
+      case "guests-desc": arr.sort((a, b) => Number(b.guests ?? 0) - Number(a.guests ?? 0)); break;
+      case "booked-asc":  arr.sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()); break;
+      case "booked-desc": arr.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()); break;
+    }
+    return arr;
+  }, [reservations, search, fromDate, toDate, filterOccasion, filterGuests, sortBy]);
+
+  const hasFilters = search || fromDate || toDate || filterOccasion !== "all" || filterGuests !== "all";
+
+  function clearFilters() {
+    setSearch(""); setFromDate(""); setToDate("");
+    setFilterOccasion("all"); setFilterGuests("all");
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-7">
-        <SectionTitle subtitle={`${reservations.length} reservations`}>Reservations</SectionTitle>
-        <Button variant="outline" className="rounded-xl border-cyan-200 text-cyan-600 hover:bg-cyan-50" onClick={() => exportCSV(reservations, "reservations.csv")} data-testid="button-export-reservations"><Download className="w-4 h-4 mr-2" />Export CSV</Button>
+        <SectionTitle subtitle={
+          hasFilters
+            ? `${filtered.length} of ${reservations.length} reservations`
+            : `${reservations.length} reservations`
+        }>Reservations</SectionTitle>
+        <div className="flex items-center gap-2">
+          <Select value={sortBy} onValueChange={v => setSortBy(v as ResSortBy)}>
+            <SelectTrigger className="w-56 bg-white border-gray-200 rounded-xl shadow-sm" data-testid="select-res-sort">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {RES_SORT_OPTIONS.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" className="rounded-xl border-cyan-200 text-cyan-600 hover:bg-cyan-50" onClick={() => exportCSV(filtered, "reservations.csv")} data-testid="button-export-reservations">
+            <Download className="w-4 h-4 mr-2" />Export CSV
+          </Button>
+        </div>
       </div>
 
-      <div className="flex gap-3 mb-5 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-48 bg-gray-50 border-gray-200 rounded-xl" />
-        {date && <Button variant="ghost" className="text-gray-400 rounded-xl" onClick={() => setDate("")}>Clear</Button>}
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-3 mb-5 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        {/* Search */}
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+          <Input
+            className="pl-9 bg-gray-50 border-gray-200 rounded-xl"
+            placeholder="Search name, phone, occasion…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            data-testid="input-search-reservations"
+          />
+        </div>
+        {/* From Date */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400 font-medium whitespace-nowrap">From</span>
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={e => setFromDate(e.target.value)}
+            className="w-44 bg-gray-50 border-gray-200 rounded-xl"
+            data-testid="input-from-date"
+          />
+        </div>
+        {/* To Date */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400 font-medium whitespace-nowrap">To</span>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={e => setToDate(e.target.value)}
+            className="w-44 bg-gray-50 border-gray-200 rounded-xl"
+            data-testid="input-to-date"
+          />
+        </div>
+        {/* Occasion filter */}
+        <Select value={filterOccasion} onValueChange={setFilterOccasion}>
+          <SelectTrigger className="w-44 bg-gray-50 border-gray-200 rounded-xl" data-testid="select-res-occasion">
+            <SelectValue placeholder="All Occasions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Occasions</SelectItem>
+            {occasions.map(occ => (
+              <SelectItem key={occ} value={occ}>{occ.charAt(0).toUpperCase() + occ.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Guests filter */}
+        <Select value={filterGuests} onValueChange={setFilterGuests}>
+          <SelectTrigger className="w-36 bg-gray-50 border-gray-200 rounded-xl" data-testid="select-res-guests">
+            <SelectValue placeholder="All Guests" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Guests</SelectItem>
+            <SelectItem value="1-2">1–2 Guests</SelectItem>
+            <SelectItem value="3-5">3–5 Guests</SelectItem>
+            <SelectItem value="6-10">6–10 Guests</SelectItem>
+            <SelectItem value="10+">10+ Guests</SelectItem>
+          </SelectContent>
+        </Select>
+        {/* Clear */}
+        {hasFilters && (
+          <Button variant="ghost" className="text-gray-400 hover:text-gray-600 rounded-xl px-3" onClick={clearFilters} data-testid="button-clear-res-filters">
+            <X className="w-4 h-4 mr-1" />Clear
+          </Button>
+        )}
       </div>
 
       {isLoading ? <LoadRow /> : (
         <>
-          {reservations.length === 0 && (
+          {filtered.length === 0 && (
             <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
               <CalendarCheck className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-gray-400 font-medium">No reservations found</p>
+              <p className="text-gray-400 font-medium">
+                {hasFilters ? "No reservations match your filters" : "No reservations found"}
+              </p>
+              {hasFilters && (
+                <button onClick={clearFilters} className="mt-2 text-sm text-cyan-500 hover:underline">Clear filters</button>
+              )}
             </div>
           )}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  {["Name", "Phone", "Date", "Time", "Guests", "Occasion", "Booked At"].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-gray-500 font-semibold text-xs uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {reservations.map((r: any, i: number) => (
-                  <tr key={String(r._id)} className="border-b border-gray-50 hover:bg-cyan-50/30 transition-colors" data-testid={`row-reservation-${r._id}`}>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{r.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.phone}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.date}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.timeSlot}</td>
-                    <td className="px-4 py-3"><Badge className="bg-cyan-50 text-cyan-700 border-cyan-200">{r.guests}</Badge></td>
-                    <td className="px-4 py-3 text-gray-500">{r.occasion || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}</td>
+          {filtered.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    {["Name", "Phone", "Date", "Time", "Guests", "Occasion", "Booked At"].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-gray-500 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filtered.map((r: any) => (
+                    <tr key={String(r._id)} className="border-b border-gray-50 hover:bg-cyan-50/30 transition-colors" data-testid={`row-reservation-${r._id}`}>
+                      <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{r.name}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.phone}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.date}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.timeSlot}</td>
+                      <td className="px-4 py-3"><Badge className="bg-cyan-50 text-cyan-700 border-cyan-200">{r.guests}</Badge></td>
+                      <td className="px-4 py-3">
+                        {r.occasion
+                          ? <Badge variant="outline" className="text-gray-600 capitalize">{r.occasion}</Badge>
+                          : <span className="text-gray-400">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>
