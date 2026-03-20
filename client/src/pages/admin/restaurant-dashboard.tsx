@@ -1194,7 +1194,7 @@ function SubcatTree({ subcats, depth = 0, onUpdate }: {
   const [addParent, setAddParent] = useState<string | null | false>(false);
   const [editId, setEditId]       = useState<string | null>(null);
   const [delId, setDelId]         = useState<string | null>(null);
-  const [form, setForm]           = useState({ title: "", visible: true });
+  const [form, setForm]           = useState({ title: "", visible: true, image: "" });
 
   const indent = depth * 16;
 
@@ -1203,16 +1203,16 @@ function SubcatTree({ subcats, depth = 0, onUpdate }: {
   }
 
   function handleAdd() {
-    const newItem = { id: genId(), title: form.title, visible: form.visible, subcategories: [] };
+    const newItem = { id: genId(), title: form.title, visible: form.visible, image: form.image, subcategories: [] };
     onUpdate(addToSubcats(subcats, addParent === null ? null : addParent as string, newItem));
     setAddParent(false);
-    setForm({ title: "", visible: true });
+    setForm({ title: "", visible: true, image: "" });
   }
 
   function handleEdit() {
     onUpdate(editInSubcats(subcats, editId!, form));
     setEditId(null);
-    setForm({ title: "", visible: true });
+    setForm({ title: "", visible: true, image: "" });
   }
 
   function handleDelete() {
@@ -1236,15 +1236,19 @@ function SubcatTree({ subcats, depth = 0, onUpdate }: {
             <span className={`text-[10px] font-bold rounded px-1 py-0.5 leading-none flex-shrink-0 ${badgeColors[Math.min(depth, 2)]}`}>
               {depth === 0 ? "SUB" : depth === 1 ? "SUB2" : "SUB3"}
             </span>
+            {sub.image ? (
+              <img src={sub.image} alt={sub.title} className="h-7 w-7 rounded-lg object-cover flex-shrink-0 border border-gray-200"
+                onError={e => { (e.target as any).style.display = "none"; }} />
+            ) : null}
             <span className="text-sm text-gray-700 flex-1 font-medium truncate">{sub.title}</span>
             <Switch checked={sub.visible} onCheckedChange={v => handleToggle(sub.id, v)} data-testid={`switch-subcat-${sub.id}`} />
             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg text-blue-500 hover:bg-blue-50"
-              onClick={() => { setAddParent(sub.id); setForm({ title: "", visible: true }); }}
+              onClick={() => { setAddParent(sub.id); setForm({ title: "", visible: true, image: "" }); }}
               title="Add sub-subcategory" data-testid={`button-addsub-${sub.id}`}>
               <Plus className="w-3 h-3" />
             </Button>
             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 rounded-lg"
-              onClick={() => { setEditId(sub.id); setForm({ title: sub.title, visible: sub.visible }); }}
+              onClick={() => { setEditId(sub.id); setForm({ title: sub.title, visible: sub.visible, image: sub.image || "" }); }}
               data-testid={`button-editsubcat-${sub.id}`}>
               <Edit className="w-3 h-3" />
             </Button>
@@ -1268,17 +1272,25 @@ function SubcatTree({ subcats, depth = 0, onUpdate }: {
 
       {/* Add sub-subcategory inline form */}
       {addParent !== false && (
-        <div className={`flex items-center gap-2 p-2 rounded-xl border border-dashed ${borderColors[Math.min(depth + 1, 2)]} bg-white`}
+        <div className={`flex flex-col gap-2 p-2 rounded-xl border border-dashed ${borderColors[Math.min(depth + 1, 2)]} bg-white`}
           style={{ marginLeft: addParent !== null ? "16px" : "0" }}>
-          <Input autoFocus value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-            placeholder="Subcategory name…" className="h-7 text-sm flex-1" data-testid="input-subcat-name" />
-          <Switch checked={form.visible} onCheckedChange={v => setForm(p => ({ ...p, visible: v }))} />
-          <Button size="sm" className="h-7 px-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs"
-            onClick={handleAdd} disabled={!form.title.trim()}>Add</Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg"
-            onClick={() => { setAddParent(false); setForm({ title: "", visible: true }); }}>
-            <X className="w-3 h-3" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Input autoFocus value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="Subcategory name…" className="h-7 text-sm flex-1" data-testid="input-subcat-name" />
+            <Switch checked={form.visible} onCheckedChange={v => setForm(p => ({ ...p, visible: v }))} />
+            <Button size="sm" className="h-7 px-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs"
+              onClick={handleAdd} disabled={!form.title.trim()}>Add</Button>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg"
+              onClick={() => { setAddParent(false); setForm({ title: "", visible: true, image: "" }); }}>
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input value={form.image} onChange={e => setForm(p => ({ ...p, image: e.target.value }))}
+              placeholder="Image URL (optional)…" className="h-7 text-sm flex-1" data-testid="input-subcat-image" />
+            {form.image && <img src={form.image} alt="preview" className="h-7 w-7 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+              onError={e => { (e.target as any).style.display = "none"; }} />}
+          </div>
         </div>
       )}
 
@@ -1288,6 +1300,11 @@ function SubcatTree({ subcats, depth = 0, onUpdate }: {
           <DialogHeader><DialogTitle>Edit Subcategory</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Name</Label><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} data-testid="input-editsubcat-name" /></div>
+            <div>
+              <Label>Image URL</Label>
+              <Input value={form.image} onChange={e => setForm(p => ({ ...p, image: e.target.value }))} placeholder="https://…" data-testid="input-editsubcat-image" />
+            </div>
+            {form.image && <img src={form.image} alt="preview" className="h-24 w-full object-cover rounded-xl border" onError={e => { (e.target as any).style.display = "none"; }} />}
             <div className="flex items-center gap-3"><Switch checked={form.visible} onCheckedChange={v => setForm(p => ({ ...p, visible: v }))} /><Label>Visible</Label></div>
           </div>
           <DialogFooter>
