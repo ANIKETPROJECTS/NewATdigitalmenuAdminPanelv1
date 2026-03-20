@@ -1338,9 +1338,12 @@ function CategoriesSection({ rid }: { rid: string }) {
   const [addOpen, setAddOpen]       = useState(false);
   const [editCat, setEditCat]       = useState<any>(null);
   const [deleteCat, setDeleteCat]   = useState<any>(null);
-  const [catForm, setCatForm]       = useState<any>(CAT_EMPTY);
-  const [viewMode, setViewMode]     = useState<"list" | "grid">("list");
-  const [gridExpandId, setGridExpandId] = useState<string | null>(null);
+  const [catForm, setCatForm]         = useState<any>(CAT_EMPTY);
+  const [viewMode, setViewMode]       = useState<"list" | "grid">("list");
+  const [gridDrillCat, setGridDrillCat]     = useState<any | null>(null);
+  const [drillEditSub, setDrillEditSub]     = useState<any | null>(null);
+  const [drillEditForm, setDrillEditForm]   = useState({ title: "", image: "", visible: true });
+  const [drillDelSub, setDrillDelSub]       = useState<any | null>(null);
 
   const { data: categories = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "categories")],
@@ -1514,86 +1517,148 @@ function CategoriesSection({ rid }: { rid: string }) {
         </div>
       )}
 
-      {/* ── GRID VIEW ─────────────────────────────────────────────────────── */}
-      {viewMode === "grid" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {displayed.map((cat: any, idx: number) => {
-              const isGridExpanded = gridExpandId === String(cat._id);
-              return (
-                <div key={String(cat._id)}
-                  className={`bg-white rounded-2xl border shadow-sm overflow-hidden flex flex-col transition-all ${isGridExpanded ? "border-emerald-300 ring-2 ring-emerald-100" : "border-gray-100"}`}
-                  data-testid={`card-category-grid-${cat._id}`}>
-                  {/* Image area */}
-                  <div className="relative cursor-pointer" onClick={() => setGridExpandId(isGridExpanded ? null : String(cat._id))}>
-                    {cat.image
-                      ? <img src={cat.image} alt={cat.title} className="w-full h-28 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
-                      : <div className="w-full h-28 bg-emerald-50 flex items-center justify-center"><LayoutGrid className="w-8 h-8 text-emerald-300" /></div>
+      {/* ── GRID VIEW — Categories ─────────────────────────────────────────── */}
+      {viewMode === "grid" && !gridDrillCat && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {displayed.map((cat: any, idx: number) => (
+            <div key={String(cat._id)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col"
+              data-testid={`card-category-grid-${cat._id}`}>
+              {/* Image area */}
+              <div className="relative">
+                {cat.image
+                  ? <img src={cat.image} alt={cat.title} className="w-full h-28 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
+                  : <div className="w-full h-28 bg-emerald-50 flex items-center justify-center"><LayoutGrid className="w-8 h-8 text-emerald-300" /></div>
+                }
+                <span className="absolute top-2 left-2 text-[10px] font-bold text-emerald-700 bg-white/90 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none shadow-sm">#{idx + 1}</span>
+                <span className={`absolute top-2 right-2 text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${cat.visible ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+                  {cat.visible ? "ON" : "OFF"}
+                </span>
+              </div>
+              {/* Info */}
+              <div className="p-3 flex-1 flex flex-col gap-1">
+                <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{cat.title}</p>
+                <p className="text-xs text-gray-400">{cat.subcategories?.length || 0} subcategories</p>
+              </div>
+              {/* Actions */}
+              <div className="px-3 pb-3 flex items-center justify-between gap-1">
+                <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-grid-${cat._id}`} />
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                    title="Manage subcategories" onClick={() => setGridDrillCat(cat)} data-testid={`button-addsub-cat-grid-${cat._id}`}>
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-grid-${cat._id}`}><Edit className="w-3 h-3" /></Button>
+                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-grid-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── GRID VIEW — Subcategories drilldown ───────────────────────────── */}
+      {viewMode === "grid" && gridDrillCat && (() => {
+        const freshCat = categories.find((c: any) => String(c._id) === String(gridDrillCat._id)) ?? gridDrillCat;
+        const subcats: any[] = freshCat.subcategories || [];
+
+        function updateSub(id: string, patch: any) {
+          const next = subcats.map((s: any) => s.id === id ? { ...s, ...patch } : s);
+          handleSubcatUpdate(freshCat, next);
+        }
+        function deleteSub(id: string) {
+          handleSubcatUpdate(freshCat, subcats.filter((s: any) => s.id !== id));
+        }
+
+        return (
+          <div className="space-y-4">
+            {/* Breadcrumb / back header */}
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl" onClick={() => setGridDrillCat(null)} data-testid="button-drilldown-back">
+                <ArrowLeft className="w-4 h-4" /> Back
+              </Button>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span className="text-gray-400">Categories</span>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+                {freshCat.image && <img src={freshCat.image} alt={freshCat.title} className="h-5 w-5 rounded object-cover" onError={e => { (e.target as any).style.display = "none"; }} />}
+                <span className="font-semibold text-gray-800">{freshCat.title}</span>
+              </div>
+            </div>
+
+            {/* Subcategories grid */}
+            {subcats.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
+                <LayoutGrid className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                <p className="text-gray-400 text-sm">No subcategories yet. Add one below.</p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {subcats.map((sub: any, sidx: number) => (
+                <div key={sub.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col" data-testid={`card-subcat-grid-${sub.id}`}>
+                  {/* Image */}
+                  <div className="relative">
+                    {sub.image
+                      ? <img src={sub.image} alt={sub.title} className="w-full h-24 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
+                      : <div className="w-full h-24 bg-blue-50 flex items-center justify-center"><LayoutGrid className="w-7 h-7 text-blue-200" /></div>
                     }
-                    <span className="absolute top-2 left-2 text-[10px] font-bold text-emerald-700 bg-white/90 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none shadow-sm">#{idx + 1}</span>
-                    <span className={`absolute top-2 right-2 text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${cat.visible ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
-                      {cat.visible ? "ON" : "OFF"}
+                    <span className="absolute top-2 left-2 text-[10px] font-bold text-blue-600 bg-white/90 border border-blue-100 rounded-md px-1.5 py-0.5 leading-none shadow-sm">#{sidx + 1}</span>
+                    <span className={`absolute top-2 right-2 text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${sub.visible ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+                      {sub.visible ? "ON" : "OFF"}
                     </span>
                   </div>
-
                   {/* Info */}
-                  <div className="p-3 flex-1 flex flex-col gap-1 cursor-pointer" onClick={() => setGridExpandId(isGridExpanded ? null : String(cat._id))}>
-                    <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{cat.title}</p>
-                    <p className="text-xs text-gray-400">{cat.subcategories?.length || 0} subcategories</p>
+                  <div className="p-3 flex-1">
+                    <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{sub.title}</p>
+                    {sub.subcategories?.length > 0 && <p className="text-xs text-gray-400 mt-0.5">{sub.subcategories.length} sub-subcategories</p>}
                   </div>
-
                   {/* Actions */}
                   <div className="px-3 pb-3 flex items-center justify-between gap-1">
-                    <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-grid-${cat._id}`} />
+                    <Switch checked={sub.visible} onCheckedChange={v => updateSub(sub.id, { visible: v })} data-testid={`switch-subcat-grid-${sub.id}`} />
                     <div className="flex items-center gap-1">
-                      <Button size="sm" variant="outline"
-                        className={`h-6 w-6 p-0 rounded-lg border-emerald-200 hover:bg-emerald-50 ${isGridExpanded ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600" : "text-emerald-600"}`}
-                        title="Manage subcategories"
-                        onClick={() => setGridExpandId(isGridExpanded ? null : String(cat._id))}
-                        data-testid={`button-addsub-cat-grid-${cat._id}`}
-                      ><Plus className="w-3 h-3" /></Button>
-                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-grid-${cat._id}`}><Edit className="w-3 h-3" /></Button>
-                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-grid-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg"
+                        onClick={() => { setDrillEditSub(sub); setDrillEditForm({ title: sub.title, image: sub.image || "", visible: sub.visible }); }}
+                        data-testid={`button-edit-subcat-grid-${sub.id}`}><Edit className="w-3 h-3" /></Button>
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50"
+                        onClick={() => setDrillDelSub(sub)} data-testid={`button-delete-subcat-grid-${sub.id}`}><Trash2 className="w-3 h-3" /></Button>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
 
-          {/* Subcategory panel — shows below the grid for the selected category */}
-          {gridExpandId && (() => {
-            const cat = displayed.find((c: any) => String(c._id) === gridExpandId);
-            if (!cat) return null;
-            return (
-              <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-emerald-100 bg-emerald-50/60">
-                  <div className="flex items-center gap-2">
-                    {cat.image && <img src={cat.image} alt={cat.title} className="h-7 w-7 rounded-lg object-cover border border-emerald-100" onError={e => { (e.target as any).style.display = "none"; }} />}
-                    <span className="font-semibold text-gray-800 text-sm">{cat.title}</span>
-                    <span className="text-xs text-gray-400">— Subcategories</span>
-                  </div>
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-gray-400 hover:text-gray-600"
-                    onClick={() => setGridExpandId(null)} data-testid="button-close-grid-expand">
-                    <X className="w-4 h-4" />
-                  </Button>
+            {/* Add subcategory inline */}
+            <AddSubcatInline onAdd={item => handleSubcatUpdate(freshCat, [...subcats, item])} />
+
+            {/* Edit subcat dialog */}
+            <Dialog open={!!drillEditSub} onOpenChange={v => !v && setDrillEditSub(null)}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Edit Subcategory</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Name</Label><Input value={drillEditForm.title} onChange={e => setDrillEditForm(p => ({ ...p, title: e.target.value }))} data-testid="input-drill-edit-title" /></div>
+                  <div><Label>Image URL</Label><Input value={drillEditForm.image} onChange={e => setDrillEditForm(p => ({ ...p, image: e.target.value }))} placeholder="https://…" data-testid="input-drill-edit-image" /></div>
+                  {drillEditForm.image && <img src={drillEditForm.image} alt="preview" className="h-24 w-full object-cover rounded-xl border" onError={e => { (e.target as any).style.display = "none"; }} />}
+                  <div className="flex items-center gap-3"><Switch checked={drillEditForm.visible} onCheckedChange={v => setDrillEditForm(p => ({ ...p, visible: v }))} /><Label>Visible</Label></div>
                 </div>
-                <div className="p-4 space-y-2">
-                  {(cat.subcategories || []).length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-4">No subcategories yet. Add one below.</p>
-                  )}
-                  <SubcatTree
-                    subcats={cat.subcategories || []}
-                    depth={0}
-                    onUpdate={newSubcats => handleSubcatUpdate(cat, newSubcats)}
-                  />
-                  <AddSubcatInline onAdd={item => handleSubcatUpdate(cat, [...(cat.subcategories || []), item])} />
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDrillEditSub(null)}>Cancel</Button>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => { updateSub(drillEditSub.id, drillEditForm); setDrillEditSub(null); }}>Save</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete subcat dialog */}
+            <Dialog open={!!drillDelSub} onOpenChange={v => !v && setDrillDelSub(null)}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Delete Subcategory</DialogTitle><DialogDescription>Delete "{drillDelSub?.title}"? This cannot be undone.</DialogDescription></DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDrillDelSub(null)}>Cancel</Button>
+                  <Button variant="destructive" onClick={() => { deleteSub(drillDelSub.id); setDrillDelSub(null); }}>Delete</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        );
+      })()}
 
       {/* Add category dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
