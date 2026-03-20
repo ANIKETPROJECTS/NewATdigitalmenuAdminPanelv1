@@ -1340,6 +1340,7 @@ function CategoriesSection({ rid }: { rid: string }) {
   const [deleteCat, setDeleteCat]   = useState<any>(null);
   const [catForm, setCatForm]       = useState<any>(CAT_EMPTY);
   const [viewMode, setViewMode]     = useState<"list" | "grid">("list");
+  const [gridExpandId, setGridExpandId] = useState<string | null>(null);
 
   const { data: categories = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "categories")],
@@ -1515,46 +1516,82 @@ function CategoriesSection({ rid }: { rid: string }) {
 
       {/* ── GRID VIEW ─────────────────────────────────────────────────────── */}
       {viewMode === "grid" && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {displayed.map((cat: any, idx: number) => (
-            <div key={String(cat._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group" data-testid={`card-category-grid-${cat._id}`}>
-              {/* Image area */}
-              <div className="relative">
-                {cat.image
-                  ? <img src={cat.image} alt={cat.title} className="w-full h-28 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
-                  : <div className="w-full h-28 bg-emerald-50 flex items-center justify-center"><LayoutGrid className="w-8 h-8 text-emerald-300" /></div>
-                }
-                {/* Position badge */}
-                <span className="absolute top-2 left-2 text-[10px] font-bold text-emerald-700 bg-white/90 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none shadow-sm">
-                  #{idx + 1}
-                </span>
-                {/* Visible badge */}
-                <span className={`absolute top-2 right-2 text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${cat.visible ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
-                  {cat.visible ? "ON" : "OFF"}
-                </span>
-              </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {displayed.map((cat: any, idx: number) => {
+              const isGridExpanded = gridExpandId === String(cat._id);
+              return (
+                <div key={String(cat._id)}
+                  className={`bg-white rounded-2xl border shadow-sm overflow-hidden flex flex-col transition-all ${isGridExpanded ? "border-emerald-300 ring-2 ring-emerald-100" : "border-gray-100"}`}
+                  data-testid={`card-category-grid-${cat._id}`}>
+                  {/* Image area */}
+                  <div className="relative cursor-pointer" onClick={() => setGridExpandId(isGridExpanded ? null : String(cat._id))}>
+                    {cat.image
+                      ? <img src={cat.image} alt={cat.title} className="w-full h-28 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
+                      : <div className="w-full h-28 bg-emerald-50 flex items-center justify-center"><LayoutGrid className="w-8 h-8 text-emerald-300" /></div>
+                    }
+                    <span className="absolute top-2 left-2 text-[10px] font-bold text-emerald-700 bg-white/90 border border-emerald-100 rounded-md px-1.5 py-0.5 leading-none shadow-sm">#{idx + 1}</span>
+                    <span className={`absolute top-2 right-2 text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none ${cat.visible ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+                      {cat.visible ? "ON" : "OFF"}
+                    </span>
+                  </div>
 
-              {/* Info */}
-              <div className="p-3 flex-1 flex flex-col gap-1">
-                <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{cat.title}</p>
-                <p className="text-xs text-gray-400">{cat.subcategories?.length || 0} subcategories</p>
-              </div>
+                  {/* Info */}
+                  <div className="p-3 flex-1 flex flex-col gap-1 cursor-pointer" onClick={() => setGridExpandId(isGridExpanded ? null : String(cat._id))}>
+                    <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{cat.title}</p>
+                    <p className="text-xs text-gray-400">{cat.subcategories?.length || 0} subcategories</p>
+                  </div>
 
-              {/* Actions */}
-              <div className="px-3 pb-3 flex items-center justify-between gap-1">
-                <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-grid-${cat._id}`} />
-                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                    title="Add subcategory"
-                    onClick={() => { setViewMode("list"); setTimeout(() => setExpanded(prev => { const s = new Set(prev); s.add(String(cat._id)); return s; }), 50); }}
-                    data-testid={`button-addsub-cat-grid-${cat._id}`}
-                  ><Plus className="w-3 h-3" /></Button>
-                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-grid-${cat._id}`}><Edit className="w-3 h-3" /></Button>
-                  <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-grid-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
+                  {/* Actions */}
+                  <div className="px-3 pb-3 flex items-center justify-between gap-1">
+                    <Switch checked={cat.visible} onCheckedChange={v => updateMutation.mutate({ id: String(cat._id), data: { visible: v } })} data-testid={`switch-cat-visible-grid-${cat._id}`} />
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="outline"
+                        className={`h-6 w-6 p-0 rounded-lg border-emerald-200 hover:bg-emerald-50 ${isGridExpanded ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600" : "text-emerald-600"}`}
+                        title="Manage subcategories"
+                        onClick={() => setGridExpandId(isGridExpanded ? null : String(cat._id))}
+                        data-testid={`button-addsub-cat-grid-${cat._id}`}
+                      ><Plus className="w-3 h-3" /></Button>
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg" onClick={() => { setEditCat(cat); setCatForm({ title: cat.title, image: cat.image || "", order: cat.order, visible: cat.visible }); }} data-testid={`button-edit-cat-grid-${cat._id}`}><Edit className="w-3 h-3" /></Button>
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50" onClick={() => setDeleteCat(cat)} data-testid={`button-delete-cat-grid-${cat._id}`}><Trash2 className="w-3 h-3" /></Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Subcategory panel — shows below the grid for the selected category */}
+          {gridExpandId && (() => {
+            const cat = displayed.find((c: any) => String(c._id) === gridExpandId);
+            if (!cat) return null;
+            return (
+              <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-emerald-100 bg-emerald-50/60">
+                  <div className="flex items-center gap-2">
+                    {cat.image && <img src={cat.image} alt={cat.title} className="h-7 w-7 rounded-lg object-cover border border-emerald-100" onError={e => { (e.target as any).style.display = "none"; }} />}
+                    <span className="font-semibold text-gray-800 text-sm">{cat.title}</span>
+                    <span className="text-xs text-gray-400">— Subcategories</span>
+                  </div>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-gray-400 hover:text-gray-600"
+                    onClick={() => setGridExpandId(null)} data-testid="button-close-grid-expand">
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="p-4 space-y-2">
+                  {(cat.subcategories || []).length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-4">No subcategories yet. Add one below.</p>
+                  )}
+                  <SubcatTree
+                    subcats={cat.subcategories || []}
+                    depth={0}
+                    onUpdate={newSubcats => handleSubcatUpdate(cat, newSubcats)}
+                  />
+                  <AddSubcatInline onAdd={item => handleSubcatUpdate(cat, [...(cat.subcategories || []), item])} />
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })()}
         </div>
       )}
 
