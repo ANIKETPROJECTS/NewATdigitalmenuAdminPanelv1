@@ -513,6 +513,82 @@ router.patch('/:restaurantId/call-waiter', authenticateAdmin, async (req, res) =
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
     await client.db('menupage').collection('callwaiter').updateOne({}, { $set: req.body }, { upsert: true });
+    // Auto-create a notification when waiter is called
+    if (req.body.called === true) {
+      const tableNo = req.body.tableNumber || req.body.table || '';
+      await client.db('menupage').collection('notifications').insertOne({
+        type: 'call_waiter',
+        title: 'Waiter Called',
+        message: tableNo ? `Table ${tableNo} is requesting assistance.` : 'A customer is requesting waiter assistance.',
+        read: false,
+        createdAt: new Date(),
+      });
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+router.get('/:restaurantId/notifications', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    const docs = await client.db('menupage').collection('notifications')
+      .find({}).sort({ createdAt: -1 }).limit(100).toArray();
+    res.json(docs);
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.post('/:restaurantId/notifications', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    const doc = { ...req.body, read: false, createdAt: new Date() };
+    const result = await client.db('menupage').collection('notifications').insertOne(doc);
+    res.json({ ...doc, _id: result.insertedId });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.patch('/:restaurantId/notifications/read-all', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('menupage').collection('notifications').updateMany({}, { $set: { read: true } });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.patch('/:restaurantId/notifications/:id/read', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('menupage').collection('notifications').updateOne(
+      { _id: toObjectId(req.params.id) }, { $set: { read: true } }
+    );
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete('/:restaurantId/notifications/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('menupage').collection('notifications').deleteOne({ _id: toObjectId(req.params.id) });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete('/:restaurantId/notifications', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('menupage').collection('notifications').deleteMany({});
     res.json({ success: true });
   } catch (err: any) {
     res.status(err.status || 500).json({ message: err.message });

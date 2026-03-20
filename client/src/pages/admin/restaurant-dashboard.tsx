@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
   Download, Search, Plus, Edit, Trash2, RefreshCw, Eye, EyeOff, Save,
   Phone, Mail, Globe, MapPin, Instagram, Facebook, Youtube, Upload, Link,
   TrendingUp, Activity, Zap, Award, List, AlertCircle, CheckCircle2, FileDown, FileUp, SkipForward,
-  ArrowUpDown, Filter,
+  ArrowUpDown, Filter, Check, CheckCheck,
 } from "lucide-react";
 
 // ─── API base ─────────────────────────────────────────────────────────────────
@@ -50,6 +50,7 @@ const SECTIONS = [
   { id: "payment",         label: "Payment Settings",  icon: CreditCard,      color: "#22c55e", bg: "bg-green-500/10",     text: "text-green-400"  },
   { id: "logo",            label: "Logo",              icon: ImageIcon,       color: "#f43f5e", bg: "bg-rose-500/10",      text: "text-rose-400"   },
   { id: "call-waiter",     label: "Call Waiter",       icon: Bell,            color: "#0ea5e9", bg: "bg-sky-500/10",       text: "text-sky-400"    },
+  { id: "notifications",   label: "Notifications",     icon: Bell,            color: "#f59e0b", bg: "bg-amber-500/10",     text: "text-amber-400"  },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -2966,6 +2967,154 @@ function CallWaiterSection({ rid }: { rid: string }) {
   );
 }
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+function NotificationsSection({ rid }: { rid: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: notifications = [], isLoading, refetch } = useQuery<any[]>({
+    queryKey: [api(rid, "notifications")],
+    queryFn: () => apiRequest(api(rid, "notifications")),
+    refetchInterval: 30000,
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(api(rid, `notifications/${id}/read`), { method: "PATCH", body: "{}" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api(rid, "notifications")] }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(api(rid, "notifications/read-all"), { method: "PATCH", body: "{}" }),
+    onSuccess: () => { refetch(); toast({ title: "All marked as read" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(api(rid, `notifications/${id}`), { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api(rid, "notifications")] }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: () => apiRequest(api(rid, "notifications"), { method: "DELETE" }),
+    onSuccess: () => { refetch(); toast({ title: "All notifications cleared" }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const unread = notifications.filter((n: any) => !n.read).length;
+
+  const typeIcon: Record<string, { icon: any; color: string; bg: string }> = {
+    call_waiter:  { icon: Bell,        color: "text-sky-600",     bg: "bg-sky-100"     },
+    reservation:  { icon: CalendarCheck, color: "text-cyan-600",  bg: "bg-cyan-100"    },
+    customer:     { icon: Users,       color: "text-blue-600",    bg: "bg-blue-100"    },
+    system:       { icon: Info,        color: "text-gray-500",    bg: "bg-gray-100"    },
+  };
+
+  function timeAgo(date: string) {
+    const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  if (isLoading) return <LoadRow />;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <SectionTitle subtitle={`${unread} unread notification${unread !== 1 ? "s" : ""}`}>Notifications</SectionTitle>
+        <div className="flex items-center gap-2">
+          {unread > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+              className="rounded-xl text-xs gap-1.5"
+              data-testid="button-mark-all-read"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />Mark all read
+            </Button>
+          )}
+          {notifications.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => clearAllMutation.mutate()}
+              disabled={clearAllMutation.isPending}
+              className="rounded-xl text-xs gap-1.5 text-red-500 border-red-200 hover:bg-red-50"
+              data-testid="button-clear-all-notifications"
+            >
+              <Trash2 className="w-3.5 h-3.5" />Clear all
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {notifications.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 flex flex-col items-center text-center gap-3">
+          <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mb-2">
+            <Bell className="w-8 h-8 text-amber-300" />
+          </div>
+          <p className="font-semibold text-gray-700">No notifications yet</p>
+          <p className="text-sm text-gray-400">Activity from call waiter, reservations, and more will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {notifications.map((n: any) => {
+            const meta = typeIcon[n.type] || typeIcon["system"];
+            const IconComp = meta.icon;
+            return (
+              <div
+                key={String(n._id)}
+                className={`bg-white rounded-2xl border shadow-sm p-4 flex items-start gap-4 transition-all ${n.read ? "border-gray-100 opacity-70" : "border-amber-200"}`}
+                data-testid={`notification-item-${String(n._id)}`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.bg}`}>
+                  <IconComp className={`w-5 h-5 ${meta.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className={`font-semibold text-sm ${n.read ? "text-gray-500" : "text-gray-800"}`}>{n.title}</p>
+                    {!n.read && <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />}
+                  </div>
+                  <p className="text-sm text-gray-500 leading-snug">{n.message}</p>
+                  <p className="text-xs text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {!n.read && (
+                    <button
+                      onClick={() => markReadMutation.mutate(String(n._id))}
+                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Mark as read"
+                      data-testid={`button-mark-read-${String(n._id)}`}
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteMutation.mutate(String(n._id))}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete notification"
+                    data-testid={`button-delete-notification-${String(n._id)}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2988,6 +3137,14 @@ export default function RestaurantDashboard() {
 
   const activeSecDef = SECTIONS.find(s => s.id === activeSection)!;
 
+  const { data: notifData = [] } = useQuery<any[]>({
+    queryKey: [restaurantId ? api(restaurantId, "notifications") : "noop"],
+    queryFn: () => apiRequest(api(restaurantId!, "notifications")),
+    enabled: !!restaurantId,
+    refetchInterval: 30000,
+  });
+  const unreadCount = notifData.filter((n: any) => !n.read).length;
+
   function renderSection() {
     if (!restaurantId) return null;
     switch (activeSection) {
@@ -3005,6 +3162,7 @@ export default function RestaurantDashboard() {
       case "payment":         return <PaymentSection rid={restaurantId} />;
       case "logo":            return <LogoSection rid={restaurantId} />;
       case "call-waiter":     return <CallWaiterSection rid={restaurantId} />;
+      case "notifications":   return <NotificationsSection rid={restaurantId} />;
       default: return null;
     }
   }
@@ -3084,6 +3242,11 @@ export default function RestaurantDashboard() {
                     {section.label}
                   </span>
                 )}
+                {sidebarOpen && section.id === "notifications" && unreadCount > 0 && !isActive && (
+                  <div className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-[9px] font-bold leading-none">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                  </div>
+                )}
                 {isActive && sidebarOpen && (
                   <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: section.color }} />
                 )}
@@ -3138,9 +3301,18 @@ export default function RestaurantDashboard() {
 
           {/* Right side */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            <button className="relative p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors" data-testid="button-notifications">
+            <button
+              className="relative p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              onClick={() => navigate("notifications")}
+              data-testid="button-notifications"
+              title="Notifications"
+            >
               <Bell className="w-5 h-5" />
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+              {unreadCount > 0 && (
+                <div className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-[9px] font-bold leading-none">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                </div>
+              )}
             </button>
             <Button
               size="sm"

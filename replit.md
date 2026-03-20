@@ -9,6 +9,15 @@ This is a comprehensive restaurant management admin panel system called "Airavat
 - **Light Theme**: Clean, professional UI with white and blue colors for business applications
 - **Multi-Restaurant Support**: Each restaurant can have its own MongoDB URI for dynamic database connections
 
+## Recent Changes (March 2026)
+
+- **Functional Notifications System**: Added full notifications infrastructure — MongoDB `notifications` collection in each restaurant's `menupage` database, 6 backend REST endpoints (GET all, POST, PATCH mark-read, PATCH read-all, DELETE one, DELETE all), and a `NotificationsSection` page with time-ago formatting, type-based icons (call waiter, reservation, customer, system), mark as read, delete, clear all, and empty state.
+- **Notifications Sidebar Item**: Added "Notifications" to the SECTIONS nav array with amber accent; shows a live red unread-count badge next to the label when there are unread items.
+- **Functional Bell Icon**: Header bell button now navigates to the Notifications section on click and shows a dynamic red badge with the unread count, polling every 30 seconds.
+- **Auto-Notification on Call Waiter**: When a customer triggers a waiter call, the backend automatically inserts a notification into the store.
+- **Infinite-Depth Category Drilldown**: Grid view with `+` drill into subcategory grids; breadcrumb nav, Back button, edit/delete from drilldown.
+- **Subcategory Image Support**: Image URL field + live preview in add/edit forms; thumbnail shown in list rows.
+
 ## Recent Changes (January 2025)
 
 - **Customer-facing App Removed**: Removed Maharaja Feast customer-facing application to focus on admin-only system
