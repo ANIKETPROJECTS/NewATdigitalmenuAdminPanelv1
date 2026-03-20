@@ -1262,6 +1262,16 @@ function SmartPicksSection({ rid }: { rid: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section: Carousel
 // ═══════════════════════════════════════════════════════════════════════════════
+type CarouselSortBy = "order-asc" | "order-desc" | "name-asc" | "name-desc";
+type CarouselVisibility = "all" | "visible" | "hidden";
+
+const CAROUSEL_SORT_OPTIONS: { value: CarouselSortBy; label: string }[] = [
+  { value: "order-asc",  label: "Order (Asc)"  },
+  { value: "order-desc", label: "Order (Desc)" },
+  { value: "name-asc",   label: "Name (A-Z)"   },
+  { value: "name-desc",  label: "Name (Z-A)"   },
+];
+
 function CarouselSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -1269,6 +1279,10 @@ function CarouselSection({ rid }: { rid: string }) {
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const emptyForm = { url: "", alt: "", order: 1, visible: true };
   const [form, setForm] = useState(emptyForm);
+
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<CarouselSortBy>("order-asc");
+  const [visibilityFilter, setVisibilityFilter] = useState<CarouselVisibility>("all");
 
   const { data: items = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: [api(rid, "carousel")],
@@ -1294,6 +1308,24 @@ function CarouselSection({ rid }: { rid: string }) {
     onSuccess: () => refetch(),
   });
 
+  const filteredItems = useMemo(() => {
+    let result = [...items];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(i => (i.alt || "").toLowerCase().includes(q));
+    }
+    if (visibilityFilter === "visible") result = result.filter(i => i.visible);
+    if (visibilityFilter === "hidden")  result = result.filter(i => !i.visible);
+    result.sort((a, b) => {
+      if (sortBy === "order-asc")  return (a.order ?? 0) - (b.order ?? 0);
+      if (sortBy === "order-desc") return (b.order ?? 0) - (a.order ?? 0);
+      if (sortBy === "name-asc")   return (a.alt || "").localeCompare(b.alt || "");
+      if (sortBy === "name-desc")  return (b.alt || "").localeCompare(a.alt || "");
+      return 0;
+    });
+    return result;
+  }, [items, search, sortBy, visibilityFilter]);
+
   function CarouselForm() {
     return (
       <div className="space-y-3">
@@ -1310,18 +1342,57 @@ function CarouselSection({ rid }: { rid: string }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-7">
+      <div className="flex items-center justify-between mb-5">
         <SectionTitle>Carousel</SectionTitle>
         <Button onClick={() => { setForm(emptyForm); setAddOpen(true); }} className="bg-pink-500 hover:bg-pink-600 text-white rounded-xl" data-testid="button-add-carousel"><Plus className="w-4 h-4 mr-2" />Add Image</Button>
       </div>
-      {items.length === 0 && (
+
+      {/* Search / Sort / Filter toolbar */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by name…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 rounded-xl"
+            data-testid="input-carousel-search"
+          />
+        </div>
+        <Select value={sortBy} onValueChange={v => setSortBy(v as CarouselSortBy)}>
+          <SelectTrigger className="w-40 rounded-xl" data-testid="select-carousel-sort">
+            <ArrowUpDown className="w-4 h-4 mr-2 text-gray-400" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {CAROUSEL_SORT_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={visibilityFilter} onValueChange={v => setVisibilityFilter(v as CarouselVisibility)}>
+          <SelectTrigger className="w-36 rounded-xl" data-testid="select-carousel-filter">
+            <Filter className="w-4 h-4 mr-2 text-gray-400" />
+            <SelectValue placeholder="Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="visible">Visible</SelectItem>
+            <SelectItem value="hidden">Hidden</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {filteredItems.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Images className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-gray-400 font-medium">No carousel images yet</p>
+          <p className="text-gray-400 font-medium">
+            {items.length === 0 ? "No carousel images yet" : "No images match your search"}
+          </p>
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {items.map((item: any) => (
+        {filteredItems.map((item: any) => (
           <div key={String(item._id)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-all">
             <div className="relative">
               <img src={item.url} alt={item.alt} className="w-full h-36 object-cover" onError={e => { (e.target as any).src = "https://via.placeholder.com/300x150?text=Image"; }} />
