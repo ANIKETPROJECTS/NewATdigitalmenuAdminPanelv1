@@ -1341,6 +1341,7 @@ function CategoriesSection({ rid }: { rid: string }) {
   const [catForm, setCatForm]         = useState<any>(CAT_EMPTY);
   const [viewMode, setViewMode]       = useState<"list" | "grid">("list");
   const [gridDrillCat, setGridDrillCat]     = useState<any | null>(null);
+  const [gridDrillPath, setGridDrillPath]   = useState<string[]>([]);
   const [drillEditSub, setDrillEditSub]     = useState<any | null>(null);
   const [drillEditForm, setDrillEditForm]   = useState({ title: "", image: "", visible: true });
   const [drillDelSub, setDrillDelSub]       = useState<any | null>(null);
@@ -1557,45 +1558,89 @@ function CategoriesSection({ rid }: { rid: string }) {
         </div>
       )}
 
-      {/* ── GRID VIEW — Subcategories drilldown ───────────────────────────── */}
+      {/* ── GRID VIEW — Subcategories drilldown (infinite depth) ────────── */}
       {viewMode === "grid" && gridDrillCat && (() => {
         const freshCat = categories.find((c: any) => String(c._id) === String(gridDrillCat._id)) ?? gridDrillCat;
-        const subcats: any[] = freshCat.subcategories || [];
 
+        // ── path helpers ──────────────────────────────────────────────────
+        function getAtPath(root: any[], path: string[]): any[] {
+          if (path.length === 0) return root;
+          const node = root.find((s: any) => s.id === path[0]);
+          return node ? getAtPath(node.subcategories || [], path.slice(1)) : [];
+        }
+        function updateAtPath(root: any[], path: string[], next: any[]): any[] {
+          if (path.length === 0) return next;
+          return root.map((s: any) => s.id === path[0]
+            ? { ...s, subcategories: updateAtPath(s.subcategories || [], path.slice(1), next) }
+            : s);
+        }
+        function getBreadcrumb(root: any[], path: string[]): { id: string; title: string; image?: string }[] {
+          const out: { id: string; title: string; image?: string }[] = [];
+          let cur = root;
+          for (const id of path) {
+            const n = cur.find((s: any) => s.id === id);
+            if (!n) break;
+            out.push({ id: n.id, title: n.title, image: n.image });
+            cur = n.subcategories || [];
+          }
+          return out;
+        }
+
+        const rootSubcats = freshCat.subcategories || [];
+        const subcats = getAtPath(rootSubcats, gridDrillPath);
+        const crumbs  = getBreadcrumb(rootSubcats, gridDrillPath);
+
+        function saveSubcats(next: any[]) {
+          handleSubcatUpdate(freshCat, updateAtPath(rootSubcats, gridDrillPath, next));
+        }
         function updateSub(id: string, patch: any) {
-          const next = subcats.map((s: any) => s.id === id ? { ...s, ...patch } : s);
-          handleSubcatUpdate(freshCat, next);
+          saveSubcats(subcats.map((s: any) => s.id === id ? { ...s, ...patch } : s));
         }
         function deleteSub(id: string) {
-          handleSubcatUpdate(freshCat, subcats.filter((s: any) => s.id !== id));
+          saveSubcats(subcats.filter((s: any) => s.id !== id));
+        }
+        function goBack() {
+          if (gridDrillPath.length === 0) { setGridDrillCat(null); }
+          else { setGridDrillPath(p => p.slice(0, -1)); }
         }
 
         return (
           <div className="space-y-4">
-            {/* Breadcrumb / back header */}
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl" onClick={() => setGridDrillCat(null)} data-testid="button-drilldown-back">
+            {/* Breadcrumb / back */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-xl" onClick={goBack} data-testid="button-drilldown-back">
                 <ArrowLeft className="w-4 h-4" /> Back
               </Button>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span className="text-gray-400">Categories</span>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-                {freshCat.image && <img src={freshCat.image} alt={freshCat.title} className="h-5 w-5 rounded object-cover" onError={e => { (e.target as any).style.display = "none"; }} />}
-                <span className="font-semibold text-gray-800">{freshCat.title}</span>
+              <div className="flex items-center gap-1.5 text-sm flex-wrap">
+                <button className="text-gray-400 hover:text-gray-600" onClick={() => { setGridDrillCat(null); setGridDrillPath([]); }}>Categories</button>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                <button className="text-gray-500 hover:text-gray-700 flex items-center gap-1" onClick={() => setGridDrillPath([])}>
+                  {freshCat.image && <img src={freshCat.image} alt={freshCat.title} className="h-4 w-4 rounded object-cover" onError={e => { (e.target as any).style.display = "none"; }} />}
+                  {freshCat.title}
+                </button>
+                {crumbs.map((crumb, ci) => (
+                  <span key={crumb.id} className="flex items-center gap-1.5">
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                    <button className={`flex items-center gap-1 ${ci === crumbs.length - 1 ? "font-semibold text-gray-800" : "text-gray-500 hover:text-gray-700"}`}
+                      onClick={() => setGridDrillPath(gridDrillPath.slice(0, ci + 1))}>
+                      {crumb.image && <img src={crumb.image} alt={crumb.title} className="h-4 w-4 rounded object-cover" onError={e => { (e.target as any).style.display = "none"; }} />}
+                      {crumb.title}
+                    </button>
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Subcategories grid */}
+            {/* Grid */}
             {subcats.length === 0 && (
               <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
                 <LayoutGrid className="w-10 h-10 mx-auto mb-2 text-gray-200" />
-                <p className="text-gray-400 text-sm">No subcategories yet. Add one below.</p>
+                <p className="text-gray-400 text-sm">No items here yet. Add one below.</p>
               </div>
             )}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {subcats.map((sub: any, sidx: number) => (
                 <div key={sub.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col" data-testid={`card-subcat-grid-${sub.id}`}>
-                  {/* Image */}
                   <div className="relative">
                     {sub.image
                       ? <img src={sub.image} alt={sub.title} className="w-full h-24 object-cover" onError={e => { (e.target as any).style.display = "none"; }} />
@@ -1606,15 +1651,17 @@ function CategoriesSection({ rid }: { rid: string }) {
                       {sub.visible ? "ON" : "OFF"}
                     </span>
                   </div>
-                  {/* Info */}
                   <div className="p-3 flex-1">
                     <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{sub.title}</p>
-                    {sub.subcategories?.length > 0 && <p className="text-xs text-gray-400 mt-0.5">{sub.subcategories.length} sub-subcategories</p>}
+                    {sub.subcategories?.length > 0 && <p className="text-xs text-gray-400 mt-0.5">{sub.subcategories.length} sub-items</p>}
                   </div>
-                  {/* Actions */}
                   <div className="px-3 pb-3 flex items-center justify-between gap-1">
                     <Switch checked={sub.visible} onCheckedChange={v => updateSub(sub.id, { visible: v })} data-testid={`switch-subcat-grid-${sub.id}`} />
                     <div className="flex items-center gap-1">
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                        title="Drill into sub-items"
+                        onClick={() => setGridDrillPath([...gridDrillPath, sub.id])}
+                        data-testid={`button-drill-subcat-grid-${sub.id}`}><Plus className="w-3 h-3" /></Button>
                       <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-lg"
                         onClick={() => { setDrillEditSub(sub); setDrillEditForm({ title: sub.title, image: sub.image || "", visible: sub.visible }); }}
                         data-testid={`button-edit-subcat-grid-${sub.id}`}><Edit className="w-3 h-3" /></Button>
@@ -1626,8 +1673,7 @@ function CategoriesSection({ rid }: { rid: string }) {
               ))}
             </div>
 
-            {/* Add subcategory inline */}
-            <AddSubcatInline onAdd={item => handleSubcatUpdate(freshCat, [...subcats, item])} />
+            <AddSubcatInline onAdd={item => saveSubcats([...subcats, item])} />
 
             {/* Edit subcat dialog */}
             <Dialog open={!!drillEditSub} onOpenChange={v => !v && setDrillEditSub(null)}>
