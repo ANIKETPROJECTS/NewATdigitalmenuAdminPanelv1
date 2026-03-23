@@ -3199,7 +3199,7 @@ export default function RestaurantDashboard() {
       {/* ── Sidebar ── */}
       <aside
         className={`fixed top-0 left-0 h-full z-30 flex flex-col transition-all duration-300 ease-in-out
-          bg-[#0f172a] border-r border-white/5
+          bg-[#FCDC5A] border-r border-black/10
           ${sidebarOpen ? "w-64" : "w-0 md:w-[72px]"} overflow-hidden`}
       >
         {/* Sidebar header */}
@@ -3230,7 +3230,7 @@ export default function RestaurantDashboard() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group relative ${
                   isActive
                     ? `${section.bg} text-white`
-                    : "text-white hover:text-white hover:bg-white/5"
+                    : "text-gray-900 hover:text-gray-900 hover:bg-black/10"
                 }`}
                 data-testid={`nav-${section.id}`}
               >
@@ -3247,8 +3247,8 @@ export default function RestaurantDashboard() {
                   style={isActive ? { background: section.color + "33" } : {}}
                 >
                   {SECTION_IMAGES[section.id]
-                    ? <img src={SECTION_IMAGES[section.id]} alt={section.label} className="w-4 h-4 flex-shrink-0 object-contain" />
-                    : <section.icon className="w-4 h-4 flex-shrink-0" style={isActive ? { color: section.color } : {}} />
+                    ? <img src={SECTION_IMAGES[section.id]} alt={section.label} className="w-6 h-6 flex-shrink-0 object-contain" />
+                    : <section.icon className="w-6 h-6 flex-shrink-0" style={isActive ? { color: section.color } : {}} />
                   }
                 </div>
                 {sidebarOpen && (
@@ -3274,7 +3274,7 @@ export default function RestaurantDashboard() {
           <div className="p-3 border-t border-white/5 flex-shrink-0">
             <button
               onClick={() => setLocation("/admin/dashboard")}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-white hover:text-white hover:bg-white/5 transition-all text-sm"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-gray-900 hover:text-gray-900 hover:bg-black/10 transition-all text-sm"
               data-testid="button-back-sidebar"
             >
               <ArrowLeft className="w-4 h-4 flex-shrink-0" />
