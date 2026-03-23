@@ -3185,7 +3185,7 @@ export default function RestaurantDashboard() {
           ${sidebarOpen ? "w-64" : "w-0 md:w-[72px]"} overflow-hidden`}
       >
         {/* Sidebar header */}
-        <div className="flex items-center justify-center px-3 py-5 border-b border-white/5 flex-shrink-0">
+        <div className="flex items-center justify-center px-3 py-5 border-b border-white/5 flex-shrink-0 bg-white">
           {sidebarOpen ? (
             <img
               src="/digiat-logo.png"
