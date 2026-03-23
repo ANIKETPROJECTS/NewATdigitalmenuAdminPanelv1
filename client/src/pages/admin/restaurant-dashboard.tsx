@@ -3212,7 +3212,7 @@ export default function RestaurantDashboard() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group relative ${
                   isActive
                     ? `${section.bg} text-white`
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    : "text-white hover:text-white hover:bg-white/5"
                 }`}
                 data-testid={`nav-${section.id}`}
               >
@@ -3256,7 +3256,7 @@ export default function RestaurantDashboard() {
           <div className="p-3 border-t border-white/5 flex-shrink-0">
             <button
               onClick={() => setLocation("/admin/dashboard")}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-sm"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-white hover:text-white hover:bg-white/5 transition-all text-sm"
               data-testid="button-back-sidebar"
             >
               <ArrowLeft className="w-4 h-4 flex-shrink-0" />
