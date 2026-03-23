@@ -3282,8 +3282,6 @@ export default function RestaurantDashboard() {
 
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
-            <span className="text-gray-400 hidden sm:block font-medium">{restaurant?.name || "Restaurant"}</span>
-            <ChevronRight className="w-4 h-4 text-gray-300 hidden sm:block" />
             <div className="flex items-center gap-2">
               <div
                 className="w-5 h-5 rounded-md flex items-center justify-center"
@@ -3318,12 +3316,6 @@ export default function RestaurantDashboard() {
             >
               <ArrowLeft className="w-3.5 h-3.5" />Back
             </Button>
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
-            >
-              {initials}
-            </div>
           </div>
         </header>
 
