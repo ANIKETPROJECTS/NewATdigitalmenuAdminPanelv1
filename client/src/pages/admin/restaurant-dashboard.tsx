@@ -3185,23 +3185,19 @@ export default function RestaurantDashboard() {
           ${sidebarOpen ? "w-64" : "w-0 md:w-[72px]"} overflow-hidden`}
       >
         {/* Sidebar header */}
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5 flex-shrink-0">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
-          >
-            {restaurant?.image
-              ? <img src={restaurant.image} alt={restaurant.name} className="w-full h-full object-cover" />
-              : <span className="text-white">{initials}</span>}
-          </div>
-          {sidebarOpen && (
-            <div className="min-w-0 flex-1">
-              <p className="text-white font-bold text-sm truncate leading-tight">{restaurant?.name || "Restaurant"}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-emerald-400 text-xs font-medium">Dashboard Live</p>
-              </div>
-            </div>
+        <div className="flex items-center justify-center px-3 py-5 border-b border-white/5 flex-shrink-0">
+          {sidebarOpen ? (
+            <img
+              src="/digiat-logo.png"
+              alt="DigiAT Menu"
+              className="h-24 w-auto object-contain"
+            />
+          ) : (
+            <img
+              src="/digiat-logo.png"
+              alt="DigiAT Menu"
+              className="h-10 w-auto object-contain"
+            />
           )}
         </div>
 
