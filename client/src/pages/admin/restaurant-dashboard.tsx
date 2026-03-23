@@ -6338,7 +6338,7 @@ export default function RestaurantDashboard() {
                   />
                 )}
                 <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
                     isActive ? "" : "group-hover:scale-110"
                   } ${!sidebarOpen ? "mx-auto" : ""}`}
                   style={isActive ? { background: section.color + "33" } : {}}
@@ -6347,7 +6347,7 @@ export default function RestaurantDashboard() {
                     <img
                       src={SECTION_IMAGES[section.id]}
                       alt={section.label}
-                      className="w-9 h-9 flex-shrink-0 object-contain"
+                      className="w-12 h-12 flex-shrink-0 object-contain"
                     />
                   ) : (
                     <section.icon
