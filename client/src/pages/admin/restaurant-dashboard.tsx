@@ -53,6 +53,24 @@ const SECTIONS = [
   { id: "notifications",   label: "Notifications",     icon: Bell,            color: "#f59e0b", bg: "bg-amber-500/10",     text: "text-amber-400"  },
 ] as const;
 
+const SECTION_IMAGES: Record<string, string> = {
+  "overview":        "/sidebar-logos/overview.png",
+  "menu-items":      "/sidebar-logos/menu-items.png",
+  "categories":      "/sidebar-logos/categories.png",
+  "smart-picks":     "/sidebar-logos/smart-picks.png",
+  "carousel":        "/sidebar-logos/carousel.png",
+  "coupons":         "/sidebar-logos/coupons.png",
+  "customers":       "/sidebar-logos/customers.png",
+  "reservations":    "/sidebar-logos/reservations.png",
+  "social-links":    "/sidebar-logos/social-links.png",
+  "welcome-screen":  "/sidebar-logos/welcome-screen.png",
+  "restaurant-info": "/sidebar-logos/restaurant-info.png",
+  "payment":         "/sidebar-logos/payment.png",
+  "logo":            "/sidebar-logos/logo.png",
+  "call-waiter":     "/sidebar-logos/call-waiter.png",
+  "notifications":   "/sidebar-logos/notifications.png",
+};
+
 type SectionId = (typeof SECTIONS)[number]["id"];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -3228,10 +3246,10 @@ export default function RestaurantDashboard() {
                   } ${!sidebarOpen ? "mx-auto" : ""}`}
                   style={isActive ? { background: section.color + "33" } : {}}
                 >
-                  <section.icon
-                    className="w-4 h-4 flex-shrink-0"
-                    style={isActive ? { color: section.color } : {}}
-                  />
+                  {SECTION_IMAGES[section.id]
+                    ? <img src={SECTION_IMAGES[section.id]} alt={section.label} className="w-4 h-4 flex-shrink-0 object-contain" />
+                    : <section.icon className="w-4 h-4 flex-shrink-0" style={isActive ? { color: section.color } : {}} />
+                  }
                 </div>
                 {sidebarOpen && (
                   <span className={`text-sm font-medium truncate ${isActive ? "text-white" : ""}`}>
