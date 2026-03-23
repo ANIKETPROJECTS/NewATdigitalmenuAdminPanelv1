@@ -6324,7 +6324,9 @@ export default function RestaurantDashboard() {
               <button
                 key={section.id}
                 onClick={() => navigate(section.id as SectionId)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group relative ${
+                className={`w-full flex items-center gap-3 py-2.5 rounded-xl transition-all duration-200 text-left group relative ${
+                  sidebarOpen ? "px-3" : "px-0 justify-center"
+                } ${
                   isActive
                     ? `${section.bg} text-white`
                     : "text-gray-900 hover:text-gray-900 hover:bg-black/10"
