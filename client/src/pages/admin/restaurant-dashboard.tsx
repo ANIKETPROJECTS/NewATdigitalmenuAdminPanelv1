@@ -4982,6 +4982,10 @@ function CustomersSection({ rid }: { rid: string }) {
   const [sort, setSort] = useState("createdAt");
   const [order, setOrder] = useState("desc");
   const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; contactNumber: string; email: string; visitCount: string }>({ name: "", contactNumber: "", email: "", visitCount: "0" });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { toast } = useToast();
   const LIMIT = 20;
 
   const params = new URLSearchParams({
@@ -5004,6 +5008,43 @@ function CustomersSection({ rid }: { rid: string }) {
   const customers = data?.customers || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / LIMIT);
+
+  const updateMutation = useMutation({
+    mutationFn: (payload: { id: string; data: any }) =>
+      apiRequest(`${api(rid, "customers")}/${payload.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload.data),
+      }),
+    onSuccess: () => {
+      toast({ title: "Saved", description: "Customer updated." });
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: [api(rid, "customers")] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message || "Update failed", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(`${api(rid, "customers")}/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Customer removed." });
+      setDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: [api(rid, "customers")] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message || "Delete failed", variant: "destructive" }),
+  });
+
+  const openEdit = (c: any) => {
+    setEditing(c);
+    setEditForm({
+      name: c.name || "",
+      contactNumber: c.contactNumber || "",
+      email: c.email || "",
+      visitCount: String(c.visitCount ?? 0),
+    });
+  };
 
   return (
     <div>
@@ -5099,7 +5140,7 @@ function CustomersSection({ rid }: { rid: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
-                  {["Name", "Contact", "Visits", "Last Visit", "Joined"].map(
+                  {["Name", "Contact", "Visits", "Last Visit", "Joined", ""].map(
                     (h) => (
                       <th
                         key={h}
@@ -5139,6 +5180,30 @@ function CustomersSection({ rid }: { rid: string }) {
                         ? new Date(c.createdAt).toLocaleDateString()
                         : "—"}
                     </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                          onClick={() => openEdit(c)}
+                          title="Edit"
+                          data-testid={`button-edit-customer-${c._id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => setDeleteId(String(c._id))}
+                          title="Delete"
+                          data-testid={`button-delete-customer-${c._id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -5169,6 +5234,106 @@ function CustomersSection({ rid }: { rid: string }) {
           )}
         </>
       )}
+
+      {/* Edit dialog */}
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogDescription>Update the customer's details and save.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-name">Name</Label>
+              <Input
+                id="cust-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                data-testid="input-edit-customer-name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-phone">Contact Number</Label>
+              <Input
+                id="cust-phone"
+                value={editForm.contactNumber}
+                onChange={(e) => setEditForm((f) => ({ ...f, contactNumber: e.target.value }))}
+                data-testid="input-edit-customer-phone"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-email">Email</Label>
+              <Input
+                id="cust-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                data-testid="input-edit-customer-email"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-visits">Visit Count</Label>
+              <Input
+                id="cust-visits"
+                type="number"
+                min={0}
+                value={editForm.visitCount}
+                onChange={(e) => setEditForm((f) => ({ ...f, visitCount: e.target.value }))}
+                data-testid="input-edit-customer-visits"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)} data-testid="button-cancel-edit-customer">
+              Cancel
+            </Button>
+            <Button
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              disabled={updateMutation.isPending || !editing}
+              onClick={() =>
+                editing &&
+                updateMutation.mutate({
+                  id: String(editing._id),
+                  data: {
+                    name: editForm.name.trim(),
+                    contactNumber: editForm.contactNumber.trim(),
+                    email: editForm.email.trim(),
+                    visitCount: Number(editForm.visitCount) || 0,
+                  },
+                })
+              }
+              data-testid="button-save-customer"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <Dialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Customer?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The customer record will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)} data-testid="button-cancel-delete-customer">
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              data-testid="button-confirm-delete-customer"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -374,6 +374,36 @@ router.get('/:restaurantId/customers', authenticateAdmin, async (req, res) => {
   }
 });
 
+router.patch('/:restaurantId/customers/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    const { _id, ...data } = req.body;
+    const allowed: any = {};
+    if (typeof data.name === 'string') allowed.name = data.name;
+    if (typeof data.contactNumber === 'string') allowed.contactNumber = data.contactNumber;
+    if (typeof data.email === 'string') allowed.email = data.email;
+    if (typeof data.visitCount === 'number') allowed.visitCount = data.visitCount;
+    allowed.updatedAt = new Date();
+    await client.db('customersdb').collection('customers').updateOne(
+      { _id: toObjectId(req.params.id) },
+      { $set: allowed }
+    );
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete('/:restaurantId/customers/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('customersdb').collection('customers').deleteOne({ _id: toObjectId(req.params.id) });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
 // ── Reservations ──────────────────────────────────────────────────────────────
 router.get('/:restaurantId/reservations', authenticateAdmin, async (req, res) => {
   try {
