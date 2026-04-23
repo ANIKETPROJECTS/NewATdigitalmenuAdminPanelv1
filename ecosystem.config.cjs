@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "at-digital-menu",
       script: "./dist/index.js",
-      cwd: "/var/www/at-digital-menu",
+      cwd: "/var/www/NewATdigitalmenuAdminPanelv1",
       instances: 1,
       exec_mode: "fork",
       autorestart: true,
