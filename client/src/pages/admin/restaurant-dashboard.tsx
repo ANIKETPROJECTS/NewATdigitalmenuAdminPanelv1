@@ -4114,8 +4114,10 @@ function CarouselSection({ rid }: { rid: string }) {
     return result;
   }, [items, search, sortBy, visibilityFilter]);
 
+  const [uploading, setUploading] = useState(false);
+
   function CarouselForm() {
-    const handleFile = (file: File | undefined) => {
+    const handleFile = async (file: File | undefined) => {
       if (!file) return;
       if (!file.type.startsWith("image/")) {
         toast({
@@ -4125,11 +4127,34 @@ function CarouselSection({ rid }: { rid: string }) {
         });
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setForm((p) => ({ ...p, url: String(reader.result || "") }));
-      };
-      reader.readAsDataURL(file);
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append("image", file);
+        const token = localStorage.getItem("adminToken");
+        const res = await fetch(
+          `/api/restaurant-db/${rid}/upload-image`,
+          {
+            method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            body: fd,
+            credentials: "include",
+          },
+        );
+        const data = await res.json();
+        if (!res.ok)
+          throw new Error(data.message || "Upload failed");
+        setForm((p) => ({ ...p, url: data.url }));
+        toast({ title: "Image uploaded" });
+      } catch (e: any) {
+        toast({
+          title: "Upload failed",
+          description: e.message,
+          variant: "destructive",
+        });
+      } finally {
+        setUploading(false);
+      }
     };
 
     return (

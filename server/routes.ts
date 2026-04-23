@@ -605,7 +605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/restaurants", authenticateAdmin, async (req, res) => {
     try {
-      const { name, description, address, phone, email, image, website, mongoUri, customTypes, isActive, otpEnabled } = req.body;
+      const { name, description, address, phone, email, image, website, mongoUri, cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret, customTypes, isActive, otpEnabled } = req.body;
       
       if (!name || !description || !address || !phone || !email || !image) {
         return res.status(400).json({ message: "All fields are required" });
@@ -665,6 +665,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             website,
             qrCode,
             mongoUri,
+            cloudinaryCloudName,
+            cloudinaryApiKey,
+            cloudinaryApiSecret,
             customTypes: finalCustomTypes,
             isActive: isActive ?? true,
             otpEnabled: otpEnabled ?? true
@@ -717,7 +720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only Master Admin can edit restaurants" });
       }
       const { id } = req.params;
-      const { name, description, address, phone, email, image, website, mongoUri, customTypes, isActive, otpEnabled } = req.body;
+      const { name, description, address, phone, email, image, website, mongoUri, cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret, customTypes, isActive, otpEnabled } = req.body;
 
       console.log(`🔄 Updating restaurant ${id} with data:`, {
         name, description, address, phone, email, 
@@ -784,7 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const updatePromise = Restaurant.findByIdAndUpdate(
           id,
-          { name, description, address, phone, email, image, website, qrCode, mongoUri, customTypes: finalCustomTypes, isActive, otpEnabled },
+          { name, description, address, phone, email, image, website, qrCode, mongoUri, cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret, customTypes: finalCustomTypes, isActive, otpEnabled },
           { new: true }
         );
         
