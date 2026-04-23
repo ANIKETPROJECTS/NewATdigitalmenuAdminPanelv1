@@ -344,14 +344,18 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
         const token = localStorage.getItem("adminToken");
         const uploadFormData = new FormData();
         uploadFormData.append('image', imageFile);
-        uploadFormData.append('restaurantId', restaurantId || '');
-        
-        const response = await fetch('/api/admin/upload-image', {
+
+        if (!restaurantId) {
+          throw new Error('Missing restaurant id for image upload');
+        }
+
+        const response = await fetch(`/api/restaurant-db/${restaurantId}/upload-image`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
           },
           body: uploadFormData,
+          credentials: 'include',
         });
         
         console.log("📥 Upload response status:", response.status);

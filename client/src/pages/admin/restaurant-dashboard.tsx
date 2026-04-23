@@ -2586,6 +2586,33 @@ function CategoriesSection({ rid }: { rid: string }) {
     value: any;
     onChange: (v: any) => void;
   }) {
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        toast({ title: "Invalid file", description: "Please select an image", variant: "destructive" });
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: "Too large", description: "Image must be under 10MB", variant: "destructive" });
+        return;
+      }
+      try {
+        setUploading(true);
+        const url = await uploadImageToCloudinary(rid, file);
+        onChange({ ...value, image: url });
+        toast({ title: "Image uploaded" });
+      } catch (err: any) {
+        toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+
     return (
       <div className="space-y-3">
         <div>
@@ -2598,13 +2625,35 @@ function CategoriesSection({ rid }: { rid: string }) {
           />
         </div>
         <div>
-          <Label>Image URL</Label>
-          <Input
-            value={value.image}
-            onChange={(e) => onChange({ ...value, image: e.target.value })}
-            placeholder="https://…"
-            data-testid="input-cat-image"
-          />
+          <Label>Image</Label>
+          <div className="flex gap-2">
+            <Input
+              value={value.image}
+              onChange={(e) => onChange({ ...value, image: e.target.value })}
+              placeholder="https://… or upload"
+              data-testid="input-cat-image"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFile}
+              data-testid="file-cat-image"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              data-testid="button-upload-cat-image"
+            >
+              {uploading ? "Uploading…" : "Upload"}
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Upload from device — saved to this restaurant's Cloudinary.
+          </p>
         </div>
         {value.image && (
           <img
