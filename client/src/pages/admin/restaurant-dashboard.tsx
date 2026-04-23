@@ -116,6 +116,70 @@ async function uploadImageToCloudinary(
   return data.url as string;
 }
 
+function ImageUploadButton({
+  rid,
+  onUploaded,
+  size = "default",
+  testId = "button-upload-image",
+}: {
+  rid: string;
+  onUploaded: (url: string) => void;
+  size?: "sm" | "default";
+  testId?: string;
+}) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+  const ref = useRef<HTMLInputElement>(null);
+
+  const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please select an image", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Too large", description: "Image must be under 10MB", variant: "destructive" });
+      return;
+    }
+    try {
+      setUploading(true);
+      const url = await uploadImageToCloudinary(rid, file);
+      onUploaded(url);
+      toast({ title: "Image uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (ref.current) ref.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handle}
+        data-testid={`file-${testId}`}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size={size === "sm" ? "sm" : "default"}
+        className={size === "sm" ? "h-7 px-2 text-xs rounded-lg flex-shrink-0" : ""}
+        onClick={() => ref.current?.click()}
+        disabled={uploading}
+        data-testid={testId}
+      >
+        {uploading ? "Uploading…" : "Upload"}
+      </Button>
+    </>
+  );
+}
+
 // ─── Sidebar config with per-section accent colors ───────────────────────────
 const SECTIONS = [
   {
@@ -2151,10 +2215,12 @@ function SubcatTree({
   subcats,
   depth = 0,
   onUpdate,
+  rid,
 }: {
   subcats: any[];
   depth?: number;
   onUpdate: (newSubcats: any[]) => void;
+  rid: string;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addParent, setAddParent] = useState<string | null | false>(false);
@@ -2306,6 +2372,7 @@ function SubcatTree({
             <SubcatTree
               subcats={sub.subcategories}
               depth={depth + 1}
+              rid={rid}
               onUpdate={(newChildren) =>
                 onUpdate(
                   editInSubcats(subcats, sub.id, {
@@ -2365,9 +2432,15 @@ function SubcatTree({
               onChange={(e) =>
                 setForm((p) => ({ ...p, image: e.target.value }))
               }
-              placeholder="Image URL (optional)…"
+              placeholder="Image URL or upload…"
               className="h-7 text-sm flex-1"
               data-testid="input-subcat-image"
+            />
+            <ImageUploadButton
+              rid={rid}
+              size="sm"
+              testId="button-upload-subcat-image"
+              onUploaded={(url) => setForm((p) => ({ ...p, image: url }))}
             />
             {form.image && (
               <img
@@ -2401,15 +2474,22 @@ function SubcatTree({
               />
             </div>
             <div>
-              <Label>Image URL</Label>
-              <Input
-                value={form.image}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, image: e.target.value }))
-                }
-                placeholder="https://…"
-                data-testid="input-editsubcat-image"
-              />
+              <Label>Image</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={form.image}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, image: e.target.value }))
+                  }
+                  placeholder="https://… or upload"
+                  data-testid="input-editsubcat-image"
+                />
+                <ImageUploadButton
+                  rid={rid}
+                  testId="button-upload-editsubcat-image"
+                  onUploaded={(url) => setForm((p) => ({ ...p, image: url }))}
+                />
+              </div>
             </div>
             {form.image && (
               <img
@@ -2930,6 +3010,7 @@ function CategoriesSection({ rid }: { rid: string }) {
                   <SubcatTree
                     subcats={cat.subcategories || []}
                     depth={0}
+                    rid={rid}
                     onUpdate={(newSubcats) =>
                       handleSubcatUpdate(cat, newSubcats)
                     }
@@ -3321,18 +3402,27 @@ function CategoriesSection({ rid }: { rid: string }) {
                       />
                     </div>
                     <div>
-                      <Label>Image URL</Label>
-                      <Input
-                        value={drillEditForm.image}
-                        onChange={(e) =>
-                          setDrillEditForm((p) => ({
-                            ...p,
-                            image: e.target.value,
-                          }))
-                        }
-                        placeholder="https://…"
-                        data-testid="input-drill-edit-image"
-                      />
+                      <Label>Image</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={drillEditForm.image}
+                          onChange={(e) =>
+                            setDrillEditForm((p) => ({
+                              ...p,
+                              image: e.target.value,
+                            }))
+                          }
+                          placeholder="https://… or upload"
+                          data-testid="input-drill-edit-image"
+                        />
+                        <ImageUploadButton
+                          rid={rid}
+                          testId="button-upload-drill-edit-image"
+                          onUploaded={(url) =>
+                            setDrillEditForm((p) => ({ ...p, image: url }))
+                          }
+                        />
+                      </div>
                     </div>
                     {drillEditForm.image && (
                       <img
