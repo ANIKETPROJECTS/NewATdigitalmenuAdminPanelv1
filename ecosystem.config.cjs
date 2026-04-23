@@ -16,11 +16,11 @@ module.exports = {
 
         // ==== MongoDB ====
         // Replace with your production MongoDB connection string
-        MONGODB_URI: "mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/atdigitalmenu?retryWrites=true&w=majority",
+        MONGODB_URI: "mongodb+srv://raneaniket23_db_user:jXzU8puybP5NYp08@adminatdigitalmenu.i8ah2zz.mongodb.net/?appName=ADMINATDIGITALMENU",
 
         // ==== Auth ====
         // Generate a strong random string, e.g.: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-        JWT_SECRET: "REPLACE_WITH_LONG_RANDOM_SECRET",
+        JWT_SECRET: "b8kop2T9klVgQdir64ho4Kr5CDsfk12fwgfcAwsKI+5YoZB4hdXU4esRGLJkiGzh2fM4/WqJK2VwWVTN+CvKFg==",
 
         // ==== Email (Gmail SMTP for OTP / notifications) ====
         // Use a Gmail App Password (not your account password)
