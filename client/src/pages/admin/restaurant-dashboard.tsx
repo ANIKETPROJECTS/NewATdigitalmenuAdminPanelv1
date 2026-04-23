@@ -1233,6 +1233,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
   }
 
   const [imgUploading, setImgUploading] = useState(false);
+  const menuImageInputRef = useRef<HTMLInputElement>(null);
 
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState<{
@@ -1516,30 +1517,31 @@ function MenuItemsSection({ rid }: { rid: string }) {
               placeholder="https://..."
               className="flex-1"
             />
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleImageFileUpload(f);
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={imgUploading}
-                asChild={false}
-              >
-                {imgUploading ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-              </Button>
-            </label>
+            <input
+              ref={menuImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImageFileUpload(f);
+                if (menuImageInputRef.current) menuImageInputRef.current.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={imgUploading}
+              onClick={() => menuImageInputRef.current?.click()}
+              data-testid="button-upload-menu-image"
+            >
+              {imgUploading ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+            </Button>
           </div>
           {form.image && (
             <img
