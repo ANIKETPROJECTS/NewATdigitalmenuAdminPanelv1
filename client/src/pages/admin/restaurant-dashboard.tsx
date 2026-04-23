@@ -738,13 +738,13 @@ function CascadingCategoryDropdown({
             const L2Panel =
               isL1Hovered && subs.length > 0 ? (
                 <div
-                  className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] p-3 min-w-[360px]"
+                  className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] p-4 min-w-[560px] max-w-[680px]"
                   onMouseEnter={() => setHoveredParent(String(cat._id))}
                 >
                   <p className="px-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                     {cat.title}
                   </p>
-                  <div className="grid grid-cols-3 gap-1">
+                  <div className="grid grid-cols-3 gap-2">
                     {subs.map((sub: any) => {
                       const subSubs: any[] = sub.subcategories || [];
                       const isL2Hovered = hoveredSub === sub.id;
@@ -782,7 +782,7 @@ function CascadingCategoryDropdown({
                           {/* ── L3 flyout — rendered here but not clipped (no overflow on L2) ── */}
                           {isL2Hovered && subSubs.length > 0 && (
                             <div
-                              className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[220] p-3 min-w-[330px]"
+                              className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[220] p-4 min-w-[520px] max-w-[640px]"
                               onMouseEnter={() => setHoveredSub(sub.id)}
                             >
                               <p className="px-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
