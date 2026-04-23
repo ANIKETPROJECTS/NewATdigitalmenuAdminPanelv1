@@ -388,6 +388,30 @@ router.get('/:restaurantId/reservations', authenticateAdmin, async (req, res) =>
   }
 });
 
+router.patch('/:restaurantId/reservations/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    const { _id, ...data } = req.body;
+    await client.db('hamburger').collection('reservation').updateOne(
+      { _id: toObjectId(req.params.id) },
+      { $set: { ...data, updatedAt: new Date() } }
+    );
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete('/:restaurantId/reservations/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { client } = await getRestaurantClient(req.params.restaurantId);
+    await client.db('hamburger').collection('reservation').deleteOne({ _id: toObjectId(req.params.id) });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
 // ── Social Links ──────────────────────────────────────────────────────────────
 router.get('/:restaurantId/social-links', authenticateAdmin, async (req, res) => {
   try {

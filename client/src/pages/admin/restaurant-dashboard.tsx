@@ -352,9 +352,11 @@ function StatCard({
 
 // ─── Section: Overview ────────────────────────────────────────────────────────
 function OverviewSection({ rid }: { rid: string }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isFetching } = useQuery<any>({
     queryKey: [api(rid, "overview")],
     queryFn: () => apiRequest(api(rid, "overview")),
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: collections = [] } = useQuery<string[]>({
@@ -426,13 +428,26 @@ function OverviewSection({ rid }: { rid: string }) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-black text-gray-900">
-          Dashboard Overview
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Here's what's happening at your restaurant today.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900">
+            Dashboard Overview
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Here's what's happening at your restaurant today.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh"
+          data-testid="button-refresh-overview"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
       </div>
 
       {/* Stat Cards */}
@@ -4903,9 +4918,11 @@ function CustomersSection({ rid }: { rid: string }) {
   if (from) params.set("from", from);
   if (to) params.set("to", to);
 
-  const { data, isLoading } = useQuery<{ customers: any[]; total: number }>({
+  const { data, isLoading, refetch, isFetching } = useQuery<{ customers: any[]; total: number }>({
     queryKey: [api(rid, "customers"), search, from, to, sort, order, page],
     queryFn: () => apiRequest(`${api(rid, "customers")}?${params}`),
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
 
   const customers = data?.customers || [];
@@ -4918,15 +4935,28 @@ function CustomersSection({ rid }: { rid: string }) {
         <SectionTitle subtitle={`${total} total customers`}>
           Customers
         </SectionTitle>
-        <Button
-          variant="outline"
-          className="rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50"
-          onClick={() => exportCSV(customers, "customers.csv")}
-          data-testid="button-export-customers"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            data-testid="button-refresh-customers"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50"
+            onClick={() => exportCSV(customers, "customers.csv")}
+            data-testid="button-export-customers"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-5 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
@@ -5092,16 +5122,48 @@ const RES_SORT_OPTIONS: { value: ResSortBy; label: string }[] = [
 ];
 
 function ReservationsSection({ rid }: { rid: string }) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [filterOccasion, setFilterOccasion] = useState("all");
   const [filterGuests, setFilterGuests] = useState("all");
   const [sortBy, setSortBy] = useState<ResSortBy>("date-desc");
+  const [editing, setEditing] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState<any | null>(null);
 
-  const { data: reservations = [], isLoading } = useQuery<any[]>({
+  const { data: reservations = [], isLoading, refetch, isFetching } = useQuery<any[]>({
     queryKey: [api(rid, "reservations")],
     queryFn: () => apiRequest(api(rid, "reservations")),
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      apiRequest(`${api(rid, "reservations")}/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api(rid, "reservations")] });
+      toast({ title: "Reservation updated" });
+      setEditing(null);
+    },
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(`${api(rid, "reservations")}/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api(rid, "reservations")] });
+      toast({ title: "Reservation deleted" });
+      setDeleting(null);
+    },
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const occasions = useMemo(() => {
@@ -5254,6 +5316,17 @@ function ReservationsSection({ rid }: { rid: string }) {
           </Select>
           <Button
             variant="outline"
+            size="icon"
+            className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            data-testid="button-refresh-reservations"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
+            variant="outline"
             className="rounded-xl border-cyan-200 text-cyan-600 hover:bg-cyan-50"
             onClick={() => exportCSV(filtered, "reservations.csv")}
             data-testid="button-export-reservations"
@@ -5385,6 +5458,7 @@ function ReservationsSection({ rid }: { rid: string }) {
                       "Guests",
                       "Occasion",
                       "Booked At",
+                      "Actions",
                     ].map((h) => (
                       <th
                         key={h}
@@ -5436,6 +5510,28 @@ function ReservationsSection({ rid }: { rid: string }) {
                           ? new Date(r.createdAt).toLocaleDateString()
                           : "—"}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-cyan-600 hover:bg-cyan-50"
+                            onClick={() => setEditing(r)}
+                            data-testid={`button-edit-reservation-${r._id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            onClick={() => setDeleting(r)}
+                            data-testid={`button-delete-reservation-${r._id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -5444,6 +5540,154 @@ function ReservationsSection({ rid }: { rid: string }) {
           )}
         </>
       )}
+
+      {/* Edit Reservation Dialog */}
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Reservation</DialogTitle>
+            <DialogDescription>
+              Update the reservation details below.
+            </DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <div className="grid grid-cols-2 gap-3 py-2">
+              <div className="col-span-2">
+                <Label className="text-xs text-gray-500">Name</Label>
+                <Input
+                  value={editing.name ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, name: e.target.value })
+                  }
+                  data-testid="input-edit-res-name"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Phone</Label>
+                <Input
+                  value={editing.phone ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, phone: e.target.value })
+                  }
+                  data-testid="input-edit-res-phone"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Email</Label>
+                <Input
+                  value={editing.email ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, email: e.target.value })
+                  }
+                  data-testid="input-edit-res-email"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Date</Label>
+                <Input
+                  type="date"
+                  value={editing.date ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, date: e.target.value })
+                  }
+                  data-testid="input-edit-res-date"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Time Slot</Label>
+                <Input
+                  value={editing.timeSlot ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, timeSlot: e.target.value })
+                  }
+                  placeholder="e.g. 02:00 PM – 03:30 PM"
+                  data-testid="input-edit-res-time"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Guests</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editing.guests ?? ""}
+                  onChange={(e) =>
+                    setEditing({
+                      ...editing,
+                      guests: Number(e.target.value),
+                    })
+                  }
+                  data-testid="input-edit-res-guests"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Occasion</Label>
+                <Input
+                  value={editing.occasion ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, occasion: e.target.value })
+                  }
+                  data-testid="input-edit-res-occasion"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                editing &&
+                updateMutation.mutate({
+                  id: String(editing._id),
+                  data: {
+                    name: editing.name,
+                    phone: editing.phone,
+                    email: editing.email,
+                    date: editing.date,
+                    timeSlot: editing.timeSlot,
+                    guests: editing.guests,
+                    occasion: editing.occasion,
+                  },
+                })
+              }
+              disabled={updateMutation.isPending}
+              data-testid="button-save-reservation"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Reservation Confirmation */}
+      <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Reservation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the reservation for{" "}
+              <span className="font-semibold">{deleting?.name}</span>? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleting && deleteMutation.mutate(String(deleting._id))
+              }
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete-reservation"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -5922,9 +6166,11 @@ function CallWaiterSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [resetConfirm, setResetConfirm] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery<any>({
+  const { data, isLoading, refetch, isFetching } = useQuery<any>({
     queryKey: [api(rid, "call-waiter")],
     queryFn: () => apiRequest(api(rid, "call-waiter")),
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
   });
 
   const resetMutation = useMutation({
@@ -5946,9 +6192,22 @@ function CallWaiterSection({ rid }: { rid: string }) {
 
   return (
     <div>
-      <SectionTitle subtitle="Monitor and manage customer call requests">
-        Call Waiter
-      </SectionTitle>
+      <div className="flex items-center justify-between mb-4">
+        <SectionTitle subtitle="Monitor and manage customer call requests">
+          Call Waiter
+        </SectionTitle>
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh"
+          data-testid="button-refresh-call-waiter"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
       <div className="max-w-sm">
         <div
           className={`bg-white rounded-2xl border-2 shadow-sm p-8 text-center transition-all ${data?.called ? "border-red-200 bg-red-50/30" : "border-gray-100"}`}
@@ -6020,10 +6279,12 @@ function NotificationsSection({ rid }: { rid: string }) {
     data: notifications = [],
     isLoading,
     refetch,
+    isFetching,
   } = useQuery<any[]>({
     queryKey: [api(rid, "notifications")],
     queryFn: () => apiRequest(api(rid, "notifications")),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
 
   const markReadMutation = useMutation({
@@ -6130,6 +6391,17 @@ function NotificationsSection({ rid }: { rid: string }) {
               Clear all
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50 h-9 w-9"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            data-testid="button-refresh-notifications"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
         </div>
       </div>
 
