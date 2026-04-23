@@ -196,9 +196,10 @@ router.post('/:restaurantId/categories', authenticateAdmin, async (req, res) => 
 router.patch('/:restaurantId/categories/:id', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
+    const { _id, ...data } = req.body;
     await client.db('menupage').collection('categories').updateOne(
       { _id: toObjectId(req.params.id) },
-      { $set: req.body }
+      { $set: data }
     );
     res.json({ success: true });
   } catch (err: any) {
@@ -241,9 +242,10 @@ router.post('/:restaurantId/smart-picks', authenticateAdmin, async (req, res) =>
 router.patch('/:restaurantId/smart-picks/:id', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
+    const { _id, ...data } = req.body;
     await client.db('smartpicks').collection('smartpickscategorie').updateOne(
       { _id: toObjectId(req.params.id) },
-      { $set: req.body }
+      { $set: data }
     );
     res.json({ success: true });
   } catch (err: any) {
@@ -285,9 +287,10 @@ router.post('/:restaurantId/carousel', authenticateAdmin, async (req, res) => {
 router.patch('/:restaurantId/carousel/:id', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
+    const { _id, ...data } = req.body;
     await client.db('menupage').collection('carousel').updateOne(
       { _id: toObjectId(req.params.id) },
-      { $set: req.body }
+      { $set: data }
     );
     res.json({ success: true });
   } catch (err: any) {
@@ -329,9 +332,10 @@ router.post('/:restaurantId/coupons', authenticateAdmin, async (req, res) => {
 router.patch('/:restaurantId/coupons/:id', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
+    const { _id, ...data } = req.body;
     await client.db('menupage').collection('coupons').updateOne(
       { _id: toObjectId(req.params.id) },
-      { $set: req.body }
+      { $set: data }
     );
     res.json({ success: true });
   } catch (err: any) {
@@ -566,7 +570,8 @@ router.get('/:restaurantId/call-waiter', authenticateAdmin, async (req, res) => 
 router.patch('/:restaurantId/call-waiter', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
-    await client.db('menupage').collection('callwaiter').updateOne({}, { $set: req.body }, { upsert: true });
+    const { _id, ...data } = req.body;
+    await client.db('menupage').collection('callwaiter').updateOne({}, { $set: data }, { upsert: true });
     // Auto-create a notification when waiter is called
     if (req.body.called === true) {
       const tableNo = req.body.tableNumber || req.body.table || '';
