@@ -98,6 +98,24 @@ import {
 const api = (restaurantId: string, path: string) =>
   `/api/restaurant-db/${restaurantId}/${path}`;
 
+async function uploadImageToCloudinary(
+  rid: string,
+  file: File,
+): Promise<string> {
+  const fd = new FormData();
+  fd.append("image", file);
+  const token = localStorage.getItem("adminToken");
+  const res = await fetch(`/api/restaurant-db/${rid}/upload-image`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: fd,
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Upload failed");
+  return data.url as string;
+}
+
 // ─── Sidebar config with per-section accent colors ───────────────────────────
 const SECTIONS = [
   {
@@ -5878,6 +5896,7 @@ function WelcomeScreenSection({ rid }: { rid: string }) {
   const [form, setForm] = useState({ logoUrl: "", buttonText: "" });
   const [infoForm, setInfoForm] = useState<any>({});
   const [contactForm, setContactForm] = useState<any>({});
+  const [welcomeUploading, setWelcomeUploading] = useState(false);
 
   const { data, isLoading, refetch } = useQuery<any>({
     queryKey: [api(rid, "welcome-screen")],
@@ -5990,16 +6009,65 @@ function WelcomeScreenSection({ rid }: { rid: string }) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label className="font-semibold text-gray-700">Logo URL</Label>
-            <Input
-              value={form.logoUrl}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, logoUrl: e.target.value }))
-              }
-              placeholder="https://..."
-              className="mt-1 bg-gray-50 border-gray-200 rounded-xl"
-              data-testid="input-welcome-logo"
-            />
+            <Label className="font-semibold text-gray-700">Logo</Label>
+            <div className="mt-1 space-y-2">
+              <label
+                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer text-sm text-gray-600"
+                data-testid="label-welcome-logo-upload"
+              >
+                <ImageIcon className="w-4 h-4 text-gray-400" />
+                <span>
+                  {welcomeUploading ? "Uploading…" : "Upload from device"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={welcomeUploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith("image/")) {
+                      toast({
+                        title: "Invalid file",
+                        description: "Please select an image file.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setWelcomeUploading(true);
+                    try {
+                      const uploaded = await uploadImageToCloudinary(rid, file);
+                      setForm((p) => ({ ...p, logoUrl: uploaded }));
+                      toast({ title: "Image uploaded" });
+                    } catch (err: any) {
+                      toast({
+                        title: "Upload failed",
+                        description: err.message,
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setWelcomeUploading(false);
+                    }
+                  }}
+                  data-testid="input-welcome-logo-file"
+                />
+              </label>
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span>OR</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <Input
+                value={form.logoUrl}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, logoUrl: e.target.value }))
+                }
+                placeholder="Paste image URL"
+                className="bg-gray-50 border-gray-200 rounded-xl"
+                data-testid="input-welcome-logo"
+              />
+            </div>
             {form.logoUrl && (
               <img
                 src={form.logoUrl}
@@ -6213,6 +6281,7 @@ function PaymentSection({ rid }: { rid: string }) {
 function LogoSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [url, setUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const { data, isLoading, refetch } = useQuery<any>({
     queryKey: [api(rid, "logo")],
@@ -6220,6 +6289,32 @@ function LogoSection({ rid }: { rid: string }) {
   });
 
   if (data && !url && !isLoading) setUrl(data.url || "");
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadImageToCloudinary(rid, file);
+      setUrl(uploaded);
+      toast({ title: "Image uploaded" });
+    } catch (e: any) {
+      toast({
+        title: "Upload failed",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -6260,17 +6355,37 @@ function LogoSection({ rid }: { rid: string }) {
           )}
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
-          <Label className="font-semibold text-gray-700">Logo URL</Label>
+          <Label className="font-semibold text-gray-700">Logo</Label>
+          <label
+            className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer text-sm text-gray-600"
+            data-testid="label-logo-upload"
+          >
+            <ImageIcon className="w-4 h-4 text-gray-400" />
+            <span>{uploading ? "Uploading…" : "Upload from device"}</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              data-testid="input-logo-file"
+            />
+          </label>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span>OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
           <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
+            placeholder="Paste image URL"
             className="bg-gray-50 border-gray-200 rounded-xl"
             data-testid="input-logo-url"
           />
           <Button
             onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || uploading}
             className="bg-rose-500 hover:bg-rose-600 text-white rounded-xl w-full"
             data-testid="button-save-logo"
           >
