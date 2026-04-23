@@ -181,14 +181,6 @@ const SECTIONS = [
     text: "text-teal-400",
   },
   {
-    id: "restaurant-info",
-    label: "Restaurant Info",
-    icon: Info,
-    color: "#f97316",
-    bg: "bg-orange-500/10",
-    text: "text-orange-400",
-  },
-  {
     id: "payment",
     label: "Payment Settings",
     icon: CreditCard,
@@ -233,7 +225,6 @@ const SECTION_IMAGES: Record<string, string> = {
   reservations: "/sidebar-logos/reservations.png",
   "social-links": "/sidebar-logos/social-links.png",
   "welcome-screen": "/sidebar-logos/welcome-screen.png",
-  "restaurant-info": "/sidebar-logos/restaurant-info.png",
   payment: "/sidebar-logos/payment.png",
   logo: "/sidebar-logos/logo.png",
   "call-waiter": "/sidebar-logos/call-waiter.png",
@@ -5807,116 +5798,78 @@ function SocialLinksSection({ rid }: { rid: string }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section: Welcome Screen
+// Section: Welcome Screen + Restaurant Info + Contact details
 // ═══════════════════════════════════════════════════════════════════════════════
+const CONTACT_FIELDS: { key: string; label: string; placeholder: string; icon: any }[] = [
+  { key: "googleReview", label: "Google Review Link", placeholder: "https://g.page/r/...", icon: Star },
+  { key: "email", label: "Email", placeholder: "mailto:hello@example.com", icon: Mail },
+  { key: "website", label: "Website", placeholder: "https://...", icon: Globe },
+  { key: "locate", label: "Google Maps Link", placeholder: "https://maps.app.goo.gl/...", icon: MapPin },
+  { key: "call", label: "Call (tel:)", placeholder: "tel:+91...", icon: Phone },
+];
+
 function WelcomeScreenSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [form, setForm] = useState({ logoUrl: "", buttonText: "" });
+  const [infoForm, setInfoForm] = useState<any>({});
+  const [contactForm, setContactForm] = useState<any>({});
 
   const { data, isLoading, refetch } = useQuery<any>({
     queryKey: [api(rid, "welcome-screen")],
     queryFn: () => apiRequest(api(rid, "welcome-screen")),
   });
+  const { data: infoData, isLoading: infoLoading, refetch: refetchInfo } = useQuery<any>({
+    queryKey: [api(rid, "restaurant-info")],
+    queryFn: () => apiRequest(api(rid, "restaurant-info")),
+  });
+  const { data: contactData, isLoading: contactLoading, refetch: refetchContact } = useQuery<any>({
+    queryKey: [api(rid, "social-links")],
+    queryFn: () => apiRequest(api(rid, "social-links")),
+  });
 
   if (data && !form.buttonText && !isLoading) {
     setForm({ logoUrl: data.logoUrl || "", buttonText: data.buttonText || "" });
   }
+  if (infoData && Object.keys(infoForm).length === 0 && !infoLoading) setInfoForm(infoData);
+  if (contactData && Object.keys(contactForm).length === 0 && !contactLoading) setContactForm(contactData);
 
-  const saveMutation = useMutation({
+  const saveWelcomeMutation = useMutation({
     mutationFn: () =>
       apiRequest(api(rid, "welcome-screen"), {
         method: "PATCH",
         body: JSON.stringify(form),
       }),
     onSuccess: () => {
-      toast({ title: "Saved" });
+      toast({ title: "Welcome screen saved" });
       refetch();
     },
     onError: (e: any) =>
       toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  if (isLoading) return <LoadRow />;
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-7">
-        <SectionTitle>Welcome Screen</SectionTitle>
-        <Button
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-          className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl"
-          data-testid="button-save-welcome"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Save
-        </Button>
-      </div>
-      <div className="max-w-md space-y-5">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <div>
-            <Label className="font-semibold text-gray-700">Logo URL</Label>
-            <Input
-              value={form.logoUrl}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, logoUrl: e.target.value }))
-              }
-              placeholder="https://..."
-              className="mt-1 bg-gray-50 border-gray-200 rounded-xl"
-              data-testid="input-welcome-logo"
-            />
-          </div>
-          {form.logoUrl && (
-            <img
-              src={form.logoUrl}
-              alt="Logo preview"
-              className="h-24 object-contain rounded-xl border bg-gray-50 p-2"
-              onError={(e) => {
-                (e.target as any).style.display = "none";
-              }}
-            />
-          )}
-          <div>
-            <Label className="font-semibold text-gray-700">Button Text</Label>
-            <Input
-              value={form.buttonText}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, buttonText: e.target.value }))
-              }
-              placeholder="e.g. EXPLORE MENU"
-              className="mt-1 bg-gray-50 border-gray-200 rounded-xl"
-              data-testid="input-welcome-button"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section: Restaurant Info
-// ═══════════════════════════════════════════════════════════════════════════════
-function RestaurantInfoSection({ rid }: { rid: string }) {
-  const { toast } = useToast();
-  const [form, setForm] = useState<any>({});
-
-  const { data, isLoading, refetch } = useQuery<any>({
-    queryKey: [api(rid, "restaurant-info")],
-    queryFn: () => apiRequest(api(rid, "restaurant-info")),
-  });
-
-  if (data && Object.keys(form).length === 0 && !isLoading) setForm(data);
-
-  const saveMutation = useMutation({
+  const saveInfoMutation = useMutation({
     mutationFn: () =>
       apiRequest(api(rid, "restaurant-info"), {
         method: "PATCH",
-        body: JSON.stringify(form),
+        body: JSON.stringify(infoForm),
       }),
     onSuccess: () => {
-      toast({ title: "Saved" });
-      refetch();
+      toast({ title: "Restaurant info saved" });
+      refetchInfo();
+    },
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const saveContactMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(api(rid, "social-links"), {
+        method: "PATCH",
+        body: JSON.stringify(contactForm),
+      }),
+    onSuccess: () => {
+      toast({ title: "Contact details saved" });
+      refetchContact();
     },
     onError: (e: any) =>
       toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -5932,92 +5885,198 @@ function RestaurantInfoSection({ rid }: { rid: string }) {
     "whatsapp",
   ];
 
-  if (isLoading) return <LoadRow />;
+  const saveAll = () => {
+    saveWelcomeMutation.mutate();
+    saveInfoMutation.mutate();
+    saveContactMutation.mutate();
+  };
+
+  if (isLoading || infoLoading || contactLoading) return <LoadRow />;
+
+  const savingAll =
+    saveWelcomeMutation.isPending ||
+    saveInfoMutation.isPending ||
+    saveContactMutation.isPending;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-7">
-        <SectionTitle>Restaurant Info</SectionTitle>
+        <SectionTitle subtitle="Welcome screen, restaurant info & contact details">
+          Welcome Screen
+        </SectionTitle>
         <Button
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-          className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
-          data-testid="button-save-info"
+          onClick={saveAll}
+          disabled={savingAll}
+          className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl"
+          data-testid="button-save-welcome-all"
         >
           <Save className="w-4 h-4 mr-2" />
           Save All
         </Button>
       </div>
-      <div className="space-y-4">
-        {infoKeys.map((key) => {
-          const entry = form[key] || {};
-          return (
-            <div
-              key={key}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
-            >
-              <p className="font-bold text-gray-800 capitalize mb-4">{key}</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={entry.name || ""}
-                    onChange={(e) =>
-                      setForm((p: any) => ({
-                        ...p,
-                        [key]: { ...entry, name: e.target.value },
-                      }))
-                    }
-                    className="mt-1 bg-gray-50 rounded-xl border-gray-200"
-                    data-testid={`input-info-${key}-name`}
-                  />
-                </div>
-                <div>
-                  <Label>Subtext</Label>
-                  <Input
-                    value={entry.subtext || ""}
-                    onChange={(e) =>
-                      setForm((p: any) => ({
-                        ...p,
-                        [key]: { ...entry, subtext: e.target.value },
-                      }))
-                    }
-                    className="mt-1 bg-gray-50 rounded-xl border-gray-200"
-                    data-testid={`input-info-${key}-subtext`}
-                  />
-                </div>
-                {entry.linkKey !== undefined && (
+
+      {/* Welcome Screen Settings */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4 mb-5">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-teal-50 rounded-xl">
+            <Monitor className="w-4 h-4 text-teal-500" />
+          </div>
+          <h3 className="font-bold text-gray-800">Welcome Screen</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label className="font-semibold text-gray-700">Logo URL</Label>
+            <Input
+              value={form.logoUrl}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, logoUrl: e.target.value }))
+              }
+              placeholder="https://..."
+              className="mt-1 bg-gray-50 border-gray-200 rounded-xl"
+              data-testid="input-welcome-logo"
+            />
+            {form.logoUrl && (
+              <img
+                src={form.logoUrl}
+                alt="Logo preview"
+                className="mt-3 h-20 object-contain rounded-xl border bg-gray-50 p-2"
+                onError={(e) => {
+                  (e.target as any).style.display = "none";
+                }}
+              />
+            )}
+          </div>
+          <div>
+            <Label className="font-semibold text-gray-700">Button Text</Label>
+            <Input
+              value={form.buttonText}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, buttonText: e.target.value }))
+              }
+              placeholder="e.g. EXPLORE MENU"
+              className="mt-1 bg-gray-50 border-gray-200 rounded-xl"
+              data-testid="input-welcome-button"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Restaurant Info */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 bg-orange-50 rounded-xl">
+            <Info className="w-4 h-4 text-orange-500" />
+          </div>
+          <h3 className="font-bold text-gray-800">Restaurant Info</h3>
+        </div>
+        <div className="space-y-4">
+          {infoKeys.map((key) => {
+            const entry = infoForm[key] || {};
+            return (
+              <div
+                key={key}
+                className="rounded-xl border border-gray-100 p-4 bg-gray-50/50"
+              >
+                <p className="font-semibold text-gray-700 capitalize mb-3">
+                  {key}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label>Link Key</Label>
+                    <Label className="text-xs text-gray-500">Name</Label>
                     <Input
-                      value={entry.linkKey || ""}
+                      value={entry.name || ""}
                       onChange={(e) =>
-                        setForm((p: any) => ({
+                        setInfoForm((p: any) => ({
                           ...p,
-                          [key]: { ...entry, linkKey: e.target.value },
+                          [key]: { ...entry, name: e.target.value },
                         }))
                       }
-                      className="mt-1 bg-gray-50 rounded-xl border-gray-200"
+                      className="mt-1 bg-white rounded-xl border-gray-200"
+                      data-testid={`input-info-${key}-name`}
                     />
                   </div>
-                )}
-                <div className="flex items-center gap-3 mt-2">
-                  <Switch
-                    checked={entry.show ?? true}
-                    onCheckedChange={(v) =>
-                      setForm((p: any) => ({
-                        ...p,
-                        [key]: { ...entry, show: v },
-                      }))
-                    }
-                    data-testid={`switch-info-${key}-show`}
-                  />
-                  <Label>Show</Label>
+                  <div>
+                    <Label className="text-xs text-gray-500">Subtext</Label>
+                    <Input
+                      value={entry.subtext || ""}
+                      onChange={(e) =>
+                        setInfoForm((p: any) => ({
+                          ...p,
+                          [key]: { ...entry, subtext: e.target.value },
+                        }))
+                      }
+                      className="mt-1 bg-white rounded-xl border-gray-200"
+                      data-testid={`input-info-${key}-subtext`}
+                    />
+                  </div>
+                  {entry.linkKey !== undefined && (
+                    <div>
+                      <Label className="text-xs text-gray-500">Link Key</Label>
+                      <Input
+                        value={entry.linkKey || ""}
+                        onChange={(e) =>
+                          setInfoForm((p: any) => ({
+                            ...p,
+                            [key]: { ...entry, linkKey: e.target.value },
+                          }))
+                        }
+                        className="mt-1 bg-white rounded-xl border-gray-200"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mt-2">
+                    <Switch
+                      checked={entry.show ?? true}
+                      onCheckedChange={(v) =>
+                        setInfoForm((p: any) => ({
+                          ...p,
+                          [key]: { ...entry, show: v },
+                        }))
+                      }
+                      data-testid={`switch-info-${key}-show`}
+                    />
+                    <Label>Show</Label>
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Contact details: googleReview, email, website, etc. */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 bg-cyan-50 rounded-xl">
+            <Link className="w-4 h-4 text-cyan-500" />
+          </div>
+          <h3 className="font-bold text-gray-800">Contact & Links</h3>
+          <span className="text-xs text-gray-400">
+            Shown on the customer-facing menu
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {CONTACT_FIELDS.map(({ key, label, placeholder, icon: Icon }) => (
+            <div key={key}>
+              <Label className="font-semibold text-gray-700 flex items-center gap-2">
+                <Icon className="w-3.5 h-3.5 text-gray-400" />
+                {label}
+              </Label>
+              <Input
+                value={contactForm[key] || ""}
+                onChange={(e) =>
+                  setContactForm((p: any) => ({
+                    ...p,
+                    [key]: e.target.value,
+                  }))
+                }
+                placeholder={placeholder}
+                className="mt-1 bg-gray-50 border-gray-200 rounded-xl"
+                data-testid={`input-contact-${key}`}
+              />
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -6530,9 +6589,8 @@ export default function RestaurantDashboard() {
       case "social-links":
         return <SocialLinksSection rid={restaurantId} />;
       case "welcome-screen":
-        return <WelcomeScreenSection rid={restaurantId} />;
       case "restaurant-info":
-        return <RestaurantInfoSection rid={restaurantId} />;
+        return <WelcomeScreenSection rid={restaurantId} />;
       case "payment":
         return <PaymentSection rid={restaurantId} />;
       case "logo":
