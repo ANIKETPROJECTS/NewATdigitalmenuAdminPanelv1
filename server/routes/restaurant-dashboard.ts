@@ -146,7 +146,7 @@ router.patch('/:restaurantId/menu-items/:id', authenticateAdmin, async (req, res
     const { client } = await getRestaurantClient(req.params.restaurantId);
     const menuDbName = await getMenuDbName(client);
     if (!menuDbName) return res.status(400).json({ message: 'No menu database found' });
-    const { category, _collection, ...rest } = req.body;
+    const { category, _collection, _id, ...rest } = req.body;
     const col = category || _collection;
     if (!col) return res.status(400).json({ message: 'category/_collection is required' });
     const update = { $set: { ...rest, updatedAt: new Date() } };
