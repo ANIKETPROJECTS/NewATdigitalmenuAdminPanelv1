@@ -4070,16 +4070,18 @@ function CarouselSection({ rid }: { rid: string }) {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) =>
-      data._id
-        ? apiRequest(`${api(rid, "carousel")}/${data._id}`, {
+    mutationFn: (data: any) => {
+      const { _id, ...rest } = data;
+      return _id
+        ? apiRequest(`${api(rid, "carousel")}/${_id}`, {
             method: "PATCH",
-            body: JSON.stringify(data),
+            body: JSON.stringify(rest),
           })
         : apiRequest(api(rid, "carousel"), {
             method: "POST",
-            body: JSON.stringify(data),
-          }),
+            body: JSON.stringify(rest),
+          });
+    },
     onSuccess: () => {
       toast({ title: "Saved" });
       setAddOpen(false);
