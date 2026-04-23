@@ -1,1 +1,0 @@
-// Updated auto-update mechanism is now in place in the backend
