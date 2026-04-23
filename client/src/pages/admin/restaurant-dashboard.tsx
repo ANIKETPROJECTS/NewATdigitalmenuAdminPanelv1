@@ -4114,15 +4114,66 @@ function CarouselSection({ rid }: { rid: string }) {
     return result;
   }, [items, search, sortBy, visibilityFilter]);
 
+  const MAX_IMAGE_MB = 2;
+
   function CarouselForm() {
+    const handleFile = (file: File | undefined) => {
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file",
+          description: "Please select an image file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const sizeMb = file.size / (1024 * 1024);
+      if (sizeMb > MAX_IMAGE_MB) {
+        toast({
+          title: "Image too large",
+          description: `Maximum size is ${MAX_IMAGE_MB} MB. Your image is ${sizeMb.toFixed(2)} MB.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setForm((p) => ({ ...p, url: String(reader.result || "") }));
+      };
+      reader.readAsDataURL(file);
+    };
+
     return (
       <div className="space-y-3">
         <div>
-          <Label>Image URL *</Label>
-          <Input
-            value={form.url}
-            onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
-          />
+          <Label>Image *</Label>
+          <div className="mt-1 flex flex-col gap-2">
+            <label
+              className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer text-sm text-gray-600"
+              data-testid="label-carousel-upload"
+            >
+              <ImageIcon className="w-4 h-4 text-gray-400" />
+              <span>Upload from device (max {MAX_IMAGE_MB} MB)</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0])}
+                data-testid="input-carousel-file"
+              />
+            </label>
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span>OR</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+            <Input
+              value={form.url}
+              onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
+              placeholder="Paste image URL"
+              data-testid="input-carousel-url"
+            />
+          </div>
         </div>
         {form.url && (
           <img
