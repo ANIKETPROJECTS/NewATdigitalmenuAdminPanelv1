@@ -6817,12 +6817,22 @@ export default function RestaurantDashboard() {
             <img
               src="/digiat-logo.png"
               alt="DigiAT Menu"
+              width={240}
+              height={96}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
               className="h-24 w-auto object-contain"
             />
           ) : (
             <img
               src="/digiat-logo.png"
               alt="DigiAT Menu"
+              width={100}
+              height={40}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
               className="h-10 w-auto object-contain"
             />
           )}
