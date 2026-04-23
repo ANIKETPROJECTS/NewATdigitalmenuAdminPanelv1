@@ -7004,7 +7004,7 @@ export default function RestaurantDashboard() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5 no-scrollbar">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             return (
