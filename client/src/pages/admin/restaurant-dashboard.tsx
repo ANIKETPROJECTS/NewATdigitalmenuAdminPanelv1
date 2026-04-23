@@ -4114,8 +4114,6 @@ function CarouselSection({ rid }: { rid: string }) {
     return result;
   }, [items, search, sortBy, visibilityFilter]);
 
-  const MAX_IMAGE_MB = 2;
-
   function CarouselForm() {
     const handleFile = (file: File | undefined) => {
       if (!file) return;
@@ -4123,15 +4121,6 @@ function CarouselSection({ rid }: { rid: string }) {
         toast({
           title: "Invalid file",
           description: "Please select an image file.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const sizeMb = file.size / (1024 * 1024);
-      if (sizeMb > MAX_IMAGE_MB) {
-        toast({
-          title: "Image too large",
-          description: `Maximum size is ${MAX_IMAGE_MB} MB. Your image is ${sizeMb.toFixed(2)} MB.`,
           variant: "destructive",
         });
         return;
@@ -4153,7 +4142,7 @@ function CarouselSection({ rid }: { rid: string }) {
               data-testid="label-carousel-upload"
             >
               <ImageIcon className="w-4 h-4 text-gray-400" />
-              <span>Upload from device (max {MAX_IMAGE_MB} MB)</span>
+              <span>Upload from device</span>
               <input
                 type="file"
                 accept="image/*"
