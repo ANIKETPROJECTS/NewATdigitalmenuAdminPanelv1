@@ -783,54 +783,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const payload = {
+        name, description, address, phone, email, image, website, qrCode, mongoUri,
+        cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret,
+        customTypes: finalCustomTypes, isActive, otpEnabled,
+      };
+
       // Try MongoDB first with timeout, then fallback to mock data
       try {
-        const updatePromise = Restaurant.findByIdAndUpdate(
-          id,
-          { name, description, address, phone, email, image, website, qrCode, mongoUri, cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret, customTypes: finalCustomTypes, isActive, otpEnabled },
-          { new: true }
-        );
-        
+        const updatePromise = Restaurant.findByIdAndUpdate(id, payload, { new: true });
+
         const restaurant = await Promise.race([
           updatePromise,
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("MongoDB update timeout")), 2000)
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("MongoDB update timeout")), 5000)
           )
         ]);
 
-        if (!restaurant) {
-          return res.status(404).json({ message: "Restaurant not found" });
+        if (restaurant) {
+          console.log(`✅ Restaurant updated successfully: ${restaurant.name}`);
+          return res.json(restaurant);
         }
 
-        console.log(`✅ Restaurant updated successfully: ${restaurant.name}`);
-        return res.json(restaurant);
-      } catch (mongoError) {
-        console.log("MongoDB not available for restaurant update, using mock data fallback");
-        
+        // Not in MongoDB — check mock store and migrate it permanently into MongoDB
+        const mockRestaurants = getMockRestaurants();
+        const mockIndex = mockRestaurants.findIndex(r => r._id === id);
+        if (mockIndex !== -1) {
+          console.log(`📦 Migrating mock restaurant "${mockRestaurants[mockIndex].name}" into MongoDB…`);
+          const merged = { ...mockRestaurants[mockIndex], ...payload };
+          // Use the existing mock _id so the URL keeps working
+          const migrated = await Restaurant.create({
+            _id: id,
+            ...merged,
+          } as any);
+          // Drop the mock entry now that it's persisted
+          mockRestaurants.splice(mockIndex, 1);
+          console.log(`✅ Migrated and saved restaurant: ${migrated.name}`);
+          return res.json(migrated);
+        }
+
+        return res.status(404).json({ message: "Restaurant not found" });
+      } catch (mongoError: any) {
+        console.log("MongoDB not available for restaurant update, using mock data fallback:", mongoError.message);
+
         // Try to find and update in mock data
         const mockRestaurants = getMockRestaurants();
         const mockIndex = mockRestaurants.findIndex(r => r._id === id);
-        
+
         if (mockIndex === -1) {
           return res.status(404).json({ message: "Restaurant not found" });
         }
-        
-        // Update mock restaurant
-        const updatedRestaurant = {
-          ...mockRestaurants[mockIndex],
-          name,
-          description,
-          address,
-          phone,
-          email,
-          image,
-          website,
-          qrCode,
-          mongoUri,
-          customTypes: finalCustomTypes,
-          isActive
-        };
-        
+
+        const updatedRestaurant = { ...mockRestaurants[mockIndex], ...payload };
         mockRestaurants[mockIndex] = updatedRestaurant;
         console.log(`✅ Mock restaurant updated successfully: ${updatedRestaurant.name}`);
         return res.json(updatedRestaurant);
