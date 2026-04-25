@@ -1151,6 +1151,91 @@ function DataCard({
   );
 }
 
+function Pagination({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (p: number) => void;
+}) {
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, totalItems);
+
+  // Build a compact page-number list with ellipsis
+  const pages: (number | "…")[] = [];
+  const push = (n: number | "…") => pages.push(n);
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) push(i);
+  } else {
+    push(1);
+    if (currentPage > 4) push("…");
+    const from = Math.max(2, currentPage - 1);
+    const to = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = from; i <= to; i++) push(i);
+    if (currentPage < totalPages - 3) push("…");
+    push(totalPages);
+  }
+
+  return (
+    <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <p className="text-sm text-gray-600 tabular-nums">
+        Showing <span className="font-semibold text-gray-900">{start.toLocaleString()}</span>
+        –<span className="font-semibold text-gray-900">{end.toLocaleString()}</span>
+        {" "}of{" "}
+        <span className="font-semibold text-gray-900">{totalItems.toLocaleString()}</span>
+        {" "}items
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          data-testid="button-page-prev"
+        >
+          Prev
+        </button>
+        {pages.map((p, i) =>
+          p === "…" ? (
+            <span
+              key={`e-${i}`}
+              className="px-2 text-gray-400 text-sm select-none"
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              className={`min-w-[34px] px-2.5 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+                p === currentPage
+                  ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+              }`}
+              data-testid={`button-page-${p}`}
+            >
+              {p}
+            </button>
+          ),
+        )}
+        <button
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          data-testid="button-page-next"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ShowAllToggle({
   expanded,
   total,
@@ -1603,6 +1688,8 @@ function MenuItemsSection({ rid }: { rid: string }) {
   const [addOpen, setAddOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 12;
   const emptyForm = {
     name: "",
     description: "",
@@ -1672,6 +1759,22 @@ function MenuItemsSection({ rid }: { rid: string }) {
         return arr;
     }
   }, [items, sortBy]);
+
+  // Paginate ONLY when "All Categories" is selected (since that list is huge).
+  // For specific categories, show everything (usually small list).
+  const paginate = category === "all";
+  const totalPages = paginate
+    ? Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE))
+    : 1;
+  const safePage = Math.min(currentPage, totalPages);
+  const visibleItems = paginate
+    ? sortedItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+    : sortedItems;
+
+  // Reset to page 1 when filters/sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, category, filterMode, sortBy]);
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, col, patch }: { id: string; col: string; patch: any }) =>
@@ -2284,7 +2387,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
           {/* ── LIST VIEW ── */}
           {viewMode === "list" && (
             <div className="space-y-3">
-              {sortedItems.map((item: any) => (
+              {visibleItems.map((item: any) => (
                 <div
                   key={String(item._id)}
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-4 flex items-center gap-4"
@@ -2374,7 +2477,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
           {/* ── GRID VIEW ── */}
           {viewMode === "grid" && (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sortedItems.map((item: any) => (
+              {visibleItems.map((item: any) => (
                 <div
                   key={String(item._id)}
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all overflow-hidden group"
@@ -2472,6 +2575,17 @@ function MenuItemsSection({ rid }: { rid: string }) {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Pagination — only when "All Categories" is selected */}
+          {paginate && sortedItems.length > PAGE_SIZE && (
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={sortedItems.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
           )}
         </>
       )}
