@@ -510,7 +510,7 @@ function OverviewSection({ rid }: { rid: string }) {
       .sort((a, b) => b.items - a.items);
   }, [menuItems]);
 
-  const itemsPerCategory = itemsPerCategoryAll.slice(0, 8);
+  const itemsPerCategory = itemsPerCategoryAll;
 
   // ── Veg / Non-Veg distribution ─────────────────────────────────────────────
   const vegDistribution = useMemo(() => {
@@ -632,24 +632,46 @@ function OverviewSection({ rid }: { rid: string }) {
     return days;
   }, [customers]);
 
-  // ── Recent reservations ────────────────────────────────────────────────────
-  const recentReservations = useMemo(
+  // ── Recent reservations (sorted, full list) ────────────────────────────────
+  const recentReservationsAll = useMemo(
     () =>
-      [...reservations]
-        .sort((a: any, b: any) => {
-          const ta = new Date(a.createdAt || a.date || 0).getTime();
-          const tb = new Date(b.createdAt || b.date || 0).getTime();
-          return tb - ta;
-        })
-        .slice(0, 5),
+      [...reservations].sort((a: any, b: any) => {
+        const ta = new Date(a.createdAt || a.date || 0).getTime();
+        const tb = new Date(b.createdAt || b.date || 0).getTime();
+        return tb - ta;
+      }),
     [reservations],
   );
 
-  // ── Active coupons (top) ───────────────────────────────────────────────────
-  const activeCoupons = useMemo(
-    () => (coupons || []).filter((c: any) => c.show !== false).slice(0, 5),
+  // ── Active coupons (full list) ─────────────────────────────────────────────
+  const activeCouponsAll = useMemo(
+    () => (coupons || []).filter((c: any) => c.show !== false),
     [coupons],
   );
+
+  // ── Show-all toggles ───────────────────────────────────────────────────────
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [showAllCoupons, setShowAllCoupons] = useState(false);
+  const [showAllReservations, setShowAllReservations] = useState(false);
+  const [showAllPriceRanges, setShowAllPriceRanges] = useState(false);
+
+  const CAT_PREVIEW = 8;
+  const COUPON_PREVIEW = 5;
+  const RESV_PREVIEW = 5;
+  const PRICE_PREVIEW = 5;
+
+  const itemsPerCategoryShown = showAllCategories
+    ? itemsPerCategory
+    : itemsPerCategory.slice(0, CAT_PREVIEW);
+  const activeCoupons = showAllCoupons
+    ? activeCouponsAll
+    : activeCouponsAll.slice(0, COUPON_PREVIEW);
+  const recentReservations = showAllReservations
+    ? recentReservationsAll
+    : recentReservationsAll.slice(0, RESV_PREVIEW);
+  const priceRangesShown = showAllPriceRanges
+    ? priceRanges
+    : priceRanges.slice(0, PRICE_PREVIEW);
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -781,12 +803,20 @@ function OverviewSection({ rid }: { rid: string }) {
           title="Price Distribution"
           subtitle="Items grouped by price range"
           icon={<TrendingUp className="w-4 h-4 text-rose-600" />}
+          action={
+            <ShowAllToggle
+              expanded={showAllPriceRanges}
+              total={priceRanges.length}
+              preview={PRICE_PREVIEW}
+              onToggle={() => setShowAllPriceRanges((s) => !s)}
+            />
+          }
         >
           {priceStats.count === 0 ? (
             <EmptyState label="No priced items yet" />
           ) : (
             <div className="space-y-3">
-              {priceRanges.map((r) => {
+              {priceRangesShown.map((r) => {
                 const pct = priceStats.count
                   ? Math.round((r.count / priceStats.count) * 100)
                   : 0;
@@ -820,15 +850,25 @@ function OverviewSection({ rid }: { rid: string }) {
       {/* Items per Category as a TABLE */}
       <DataCard
         title="Items per Category"
-        subtitle={`Top ${itemsPerCategory.length} of ${itemsPerCategoryAll.length} categories`}
+        subtitle={`Showing ${itemsPerCategoryShown.length} of ${itemsPerCategoryAll.length} categories`}
         icon={<LayoutGrid className="w-4 h-4 text-amber-600" />}
+        action={
+          <ShowAllToggle
+            expanded={showAllCategories}
+            total={itemsPerCategoryAll.length}
+            preview={CAT_PREVIEW}
+            onToggle={() => setShowAllCategories((s) => !s)}
+          />
+        }
       >
-        {itemsPerCategory.length === 0 ? (
+        {itemsPerCategoryShown.length === 0 ? (
           <EmptyState label="No menu items yet" />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-100">
+          <div
+            className={`overflow-hidden rounded-lg border border-gray-100 ${showAllCategories ? "max-h-[500px] overflow-y-auto" : ""}`}
+          >
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600">
+              <thead className="bg-gray-50 text-gray-600 sticky top-0">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider w-10">
                     #
@@ -845,7 +885,7 @@ function OverviewSection({ rid }: { rid: string }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {itemsPerCategory.map((c, i) => {
+                {itemsPerCategoryShown.map((c, i) => {
                   const total = menuItems.length || 1;
                   const pct = Math.round((c.items / total) * 100);
                   return (
@@ -877,13 +917,23 @@ function OverviewSection({ rid }: { rid: string }) {
       {/* Active Coupons table */}
       <DataCard
         title="Active Coupons"
-        subtitle={`${activeCoupons.length} of ${coupons.length} shown`}
+        subtitle={`Showing ${activeCoupons.length} of ${activeCouponsAll.length} active`}
         icon={<Tag className="w-4 h-4 text-rose-600" />}
+        action={
+          <ShowAllToggle
+            expanded={showAllCoupons}
+            total={activeCouponsAll.length}
+            preview={COUPON_PREVIEW}
+            onToggle={() => setShowAllCoupons((s) => !s)}
+          />
+        }
       >
         {activeCoupons.length === 0 ? (
           <EmptyState label="No active coupons" />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-100">
+          <div
+            className={`overflow-hidden rounded-lg border border-gray-100 ${showAllCoupons ? "max-h-[500px] overflow-y-auto" : ""}`}
+          >
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
@@ -929,13 +979,23 @@ function OverviewSection({ rid }: { rid: string }) {
       {/* Recent Reservations table */}
       <DataCard
         title="Recent Reservations"
-        subtitle={`Latest ${recentReservations.length} bookings`}
+        subtitle={`Showing ${recentReservations.length} of ${recentReservationsAll.length} bookings`}
         icon={<CalendarCheck className="w-4 h-4 text-indigo-600" />}
+        action={
+          <ShowAllToggle
+            expanded={showAllReservations}
+            total={recentReservationsAll.length}
+            preview={RESV_PREVIEW}
+            onToggle={() => setShowAllReservations((s) => !s)}
+          />
+        }
       >
         {recentReservations.length === 0 ? (
           <EmptyState label="No reservations yet" />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-100">
+          <div
+            className={`overflow-x-auto rounded-lg border border-gray-100 ${showAllReservations ? "max-h-[500px] overflow-y-auto" : ""}`}
+          >
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
@@ -1052,31 +1112,69 @@ function DataCard({
   subtitle,
   icon,
   className,
+  action,
   children,
 }: {
   title: string;
   subtitle?: string;
   icon?: React.ReactNode;
   className?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className || ""}`}
     >
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/60">
-        <div className="flex items-center gap-2">
-          {icon && <div className="p-1.5 bg-white border border-gray-100 rounded-lg">{icon}</div>}
-          <div>
-            <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50/60">
+        <div className="flex items-center gap-2 min-w-0">
+          {icon && (
+            <div className="p-1.5 bg-white border border-gray-100 rounded-lg shrink-0">
+              {icon}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h3 className="font-semibold text-gray-900 text-sm truncate">
+              {title}
+            </h3>
             {subtitle && (
-              <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+              <p className="text-xs text-gray-500 mt-0.5 truncate">
+                {subtitle}
+              </p>
             )}
           </div>
         </div>
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       <div className="p-5">{children}</div>
     </div>
+  );
+}
+
+function ShowAllToggle({
+  expanded,
+  total,
+  preview,
+  onToggle,
+}: {
+  expanded: boolean;
+  total: number;
+  preview: number;
+  onToggle: () => void;
+}) {
+  if (total <= preview) return null;
+  return (
+    <button
+      onClick={onToggle}
+      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+      data-testid="button-show-all"
+    >
+      {expanded ? (
+        <>Show less</>
+      ) : (
+        <>Show all ({total.toLocaleString()})</>
+      )}
+    </button>
   );
 }
 
