@@ -1316,13 +1316,13 @@ function CascadingCategoryDropdown({
             const L2Panel =
               isL1Hovered && subs.length > 0 ? (
                 <div
-                  className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] p-4 min-w-[560px] max-w-[680px]"
+                  className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] p-4 min-w-[720px] max-w-[820px]"
                   onMouseEnter={() => setHoveredParent(String(cat._id))}
                 >
                   <p className="px-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                     {cat.title}
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {subs.map((sub: any) => {
                       const subSubs: any[] = sub.subcategories || [];
                       const isL2Hovered = hoveredSub === sub.id;
