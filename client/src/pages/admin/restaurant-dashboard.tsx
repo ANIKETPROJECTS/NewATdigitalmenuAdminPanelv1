@@ -463,25 +463,28 @@ function OverviewSection({ rid }: { rid: string }) {
   // ── KPI Cards ──────────────────────────────────────────────────────────────
   const stats = [
     {
-      label: "Total Menu Items",
+      label: "Menu Items",
       value: data?.totalMenuItems ?? 0,
       icon: UtensilsCrossed,
       accent: "text-amber-600",
       bg: "bg-amber-50",
+      bar: "bg-amber-500",
     },
     {
-      label: "Menu Categories",
+      label: "Categories",
       value: data?.menuCategories ?? 0,
       icon: LayoutGrid,
       accent: "text-violet-600",
       bg: "bg-violet-50",
+      bar: "bg-violet-500",
     },
     {
-      label: "Total Customers",
+      label: "Customers",
       value: data?.customers ?? 0,
       icon: Users,
       accent: "text-sky-600",
       bg: "bg-sky-50",
+      bar: "bg-sky-500",
     },
     {
       label: "Reservations",
@@ -489,6 +492,7 @@ function OverviewSection({ rid }: { rid: string }) {
       icon: CalendarCheck,
       accent: "text-emerald-600",
       bg: "bg-emerald-50",
+      bar: "bg-emerald-500",
     },
     {
       label: "Active Coupons",
@@ -496,13 +500,15 @@ function OverviewSection({ rid }: { rid: string }) {
       icon: Tag,
       accent: "text-rose-600",
       bg: "bg-rose-50",
+      bar: "bg-rose-500",
     },
     {
-      label: "UI Categories",
+      label: "UI Sections",
       value: data?.topLevelCategories ?? 0,
       icon: LayoutDashboard,
       accent: "text-indigo-600",
       bg: "bg-indigo-50",
+      bar: "bg-indigo-500",
     },
   ];
 
@@ -537,16 +543,22 @@ function OverviewSection({ rid }: { rid: string }) {
     ];
   }, [menuItems]);
 
+  // Parse first numeric token from a price field.
+  // Handles plain numbers ("299"), strings with currency/whitespace ("₹299"),
+  // and split prices like "45 | 76" or "299 / 599" by taking the FIRST value.
+  const parsePrice = (raw: any): number | null => {
+    if (raw == null || raw === "") return null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+    const m = String(raw).match(/(\d+(?:\.\d+)?)/);
+    if (!m) return null;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) ? n : null;
+  };
+
   // ── Price summary ──────────────────────────────────────────────────────────
   const priceStats = useMemo(() => {
     const prices = menuItems
-      .map((i) => {
-        const raw =
-          typeof i.price === "string"
-            ? parseFloat(i.price.replace(/[^\d.]/g, ""))
-            : Number(i.price);
-        return Number.isFinite(raw) ? raw : null;
-      })
+      .map((i) => parsePrice(i.price))
       .filter((n): n is number => n !== null && n > 0);
 
     if (prices.length === 0)
@@ -571,11 +583,8 @@ function OverviewSection({ rid }: { rid: string }) {
       { name: "₹1000+", min: 1000, max: Infinity, count: 0 },
     ];
     menuItems.forEach((item) => {
-      const raw =
-        typeof item.price === "string"
-          ? parseFloat(item.price.replace(/[^\d.]/g, ""))
-          : Number(item.price);
-      if (!Number.isFinite(raw) || raw <= 0) return;
+      const raw = parsePrice(item.price);
+      if (raw === null || raw <= 0) return;
       const b = buckets.find((bk) => raw >= bk.min && raw < bk.max);
       if (b) b.count++;
     });
@@ -697,21 +706,38 @@ function OverviewSection({ rid }: { rid: string }) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((s) => (
           <KpiCard key={s.label} {...s} isLoading={isLoading} />
         ))}
       </div>
 
       {/* Pricing summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <PriceMetric label="Avg. Price" value={`₹${priceStats.avg}`} />
-        <PriceMetric label="Min. Price" value={`₹${priceStats.min}`} />
-        <PriceMetric label="Max. Price" value={`₹${priceStats.max}`} />
-        <PriceMetric
-          label="Items with Price"
-          value={priceStats.count.toString()}
-        />
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/60">
+          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-rose-600" />
+            Pricing Summary
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
+          <PriceMetric
+            label="Avg. Price"
+            value={priceStats.avg ? `₹${priceStats.avg.toLocaleString()}` : "—"}
+          />
+          <PriceMetric
+            label="Min. Price"
+            value={priceStats.min ? `₹${priceStats.min.toLocaleString()}` : "—"}
+          />
+          <PriceMetric
+            label="Max. Price"
+            value={priceStats.max ? `₹${priceStats.max.toLocaleString()}` : "—"}
+          />
+          <PriceMetric
+            label="Items with Price"
+            value={priceStats.count.toLocaleString()}
+          />
+        </div>
       </div>
 
       {/* Top row of charts */}
@@ -1100,6 +1126,7 @@ function KpiCard({
   icon: Icon,
   accent,
   bg,
+  bar,
   isLoading,
 }: {
   label: string;
@@ -1107,22 +1134,26 @@ function KpiCard({
   icon: any;
   accent: string;
   bg: string;
+  bar?: string;
   isLoading?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+    <div className="relative bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all overflow-hidden">
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-1 ${bar || "bg-gray-300"}`}
+      />
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 leading-tight pr-2">
           {label}
         </p>
-        <div className={`p-1.5 rounded-lg ${bg}`}>
+        <div className={`p-2 rounded-lg ${bg} shrink-0`}>
           <Icon className={`w-4 h-4 ${accent}`} />
         </div>
       </div>
       {isLoading ? (
-        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-9 w-20" />
       ) : (
-        <p className="text-2xl font-bold text-gray-900 tabular-nums">
+        <p className="text-3xl font-bold text-gray-900 tabular-nums tracking-tight">
           {Number(value).toLocaleString()}
         </p>
       )}
@@ -1132,11 +1163,11 @@ function KpiCard({
 
 function PriceMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-200">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+    <div className="px-5 py-4 bg-white">
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
         {label}
       </p>
-      <p className="text-xl font-bold text-gray-900 mt-1 tabular-nums">
+      <p className="text-2xl font-bold text-gray-900 mt-1.5 tabular-nums tracking-tight">
         {value}
       </p>
     </div>
