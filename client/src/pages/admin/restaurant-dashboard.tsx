@@ -1460,8 +1460,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
     }
   }
 
-  function ItemForm({ onClose }: { onClose: () => void }) {
-    return (
+  const itemFormJsx = (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>Name *</Label>
@@ -1614,7 +1613,6 @@ function MenuItemsSection({ rid }: { rid: string }) {
         </div>
       </div>
     );
-  }
 
   return (
     <div>
@@ -1969,7 +1967,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle>Add Menu Item</DialogTitle>
           </DialogHeader>
-          <ItemForm onClose={() => setAddOpen(false)} />
+          {itemFormJsx}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>
               Cancel
@@ -1989,7 +1987,7 @@ function MenuItemsSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle>Edit Menu Item</DialogTitle>
           </DialogHeader>
-          <ItemForm onClose={() => setEditItem(null)} />
+          {itemFormJsx}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>
               Cancel
