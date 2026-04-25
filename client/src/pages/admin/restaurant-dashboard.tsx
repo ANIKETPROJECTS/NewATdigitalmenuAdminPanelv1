@@ -36,6 +36,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  AreaChart,
+  Area,
 } from "recharts";
 import {
   LayoutDashboard,
@@ -428,182 +434,453 @@ function OverviewSection({ rid }: { rid: string }) {
   const { data, isLoading, refetch, isFetching } = useQuery<any>({
     queryKey: [api(rid, "overview")],
     queryFn: () => apiRequest(api(rid, "overview")),
-    refetchInterval: 5000,
+    refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
 
-  const { data: collections = [] } = useQuery<string[]>({
-    queryKey: [api(rid, "menu-collections")],
-    queryFn: () => apiRequest(api(rid, "menu-collections")),
+  const { data: menuItems = [] } = useQuery<any[]>({
+    queryKey: [api(rid, "menu-items"), "overview"],
+    queryFn: () => apiRequest(api(rid, "menu-items")),
   });
 
+  const { data: reservations = [] } = useQuery<any[]>({
+    queryKey: [api(rid, "reservations"), "overview"],
+    queryFn: () => apiRequest(api(rid, "reservations")),
+  });
+
+  const { data: customersData } = useQuery<any>({
+    queryKey: [api(rid, "customers"), "overview"],
+    queryFn: () => apiRequest(`${api(rid, "customers")}?limit=100`),
+  });
+
+  const { data: coupons = [] } = useQuery<any[]>({
+    queryKey: [api(rid, "coupons"), "overview"],
+    queryFn: () => apiRequest(api(rid, "coupons")),
+  });
+
+  const customers: any[] = customersData?.customers || [];
+
+  // ── KPI Cards ──────────────────────────────────────────────────────────────
   const stats = [
     {
       label: "Total Menu Items",
-      value: data?.totalMenuItems,
+      value: data?.totalMenuItems ?? 0,
       icon: UtensilsCrossed,
-      gradient: "bg-gradient-to-br from-amber-400 to-orange-500",
-      borderColor: "border-amber-400",
+      accent: "text-amber-600",
+      bg: "bg-amber-50",
     },
     {
       label: "Menu Categories",
-      value: data?.menuCategories,
+      value: data?.menuCategories ?? 0,
       icon: LayoutGrid,
-      gradient: "bg-gradient-to-br from-violet-400 to-purple-600",
-      borderColor: "border-violet-400",
+      accent: "text-violet-600",
+      bg: "bg-violet-50",
     },
     {
       label: "Total Customers",
-      value: data?.customers,
+      value: data?.customers ?? 0,
       icon: Users,
-      gradient: "bg-gradient-to-br from-blue-400 to-cyan-500",
-      borderColor: "border-blue-400",
+      accent: "text-sky-600",
+      bg: "bg-sky-50",
     },
     {
       label: "Reservations",
-      value: data?.reservations,
+      value: data?.reservations ?? 0,
       icon: CalendarCheck,
-      gradient: "bg-gradient-to-br from-emerald-400 to-teal-500",
-      borderColor: "border-emerald-400",
+      accent: "text-emerald-600",
+      bg: "bg-emerald-50",
     },
     {
       label: "Active Coupons",
-      value: data?.activeCoupons,
+      value: data?.activeCoupons ?? 0,
       icon: Tag,
-      gradient: "bg-gradient-to-br from-rose-400 to-pink-600",
-      borderColor: "border-rose-400",
+      accent: "text-rose-600",
+      bg: "bg-rose-50",
     },
     {
       label: "UI Categories",
-      value: data?.topLevelCategories,
+      value: data?.topLevelCategories ?? 0,
       icon: LayoutDashboard,
-      gradient: "bg-gradient-to-br from-indigo-400 to-blue-600",
-      borderColor: "border-indigo-400",
+      accent: "text-indigo-600",
+      bg: "bg-indigo-50",
     },
   ];
 
-  const menuChartData = collections
-    .slice(0, 10)
-    .map((col: string, i: number) => ({
-      name: formatCategory(col).split(" ")[0],
-      items: Math.max(1, (data?.totalMenuItems || 10) - i * 2),
-    }));
+  // ── Items per category (real) ──────────────────────────────────────────────
+  const itemsPerCategoryAll = useMemo(() => {
+    const map = new Map<string, number>();
+    menuItems.forEach((item) => {
+      const cat = item._collection || item.category || "Other";
+      map.set(cat, (map.get(cat) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([name, items]) => ({
+        name: formatCategory(name),
+        items,
+      }))
+      .sort((a, b) => b.items - a.items);
+  }, [menuItems]);
 
-  const weeklyData = [
-    { day: "Mon", visits: 12 },
-    { day: "Tue", visits: 19 },
-    { day: "Wed", visits: 14 },
-    { day: "Thu", visits: 28 },
-    { day: "Fri", visits: 35 },
-    { day: "Sat", visits: 42 },
-    { day: "Sun", visits: 38 },
-  ];
+  const itemsPerCategory = itemsPerCategoryAll.slice(0, 8);
+
+  // ── Veg / Non-Veg distribution ─────────────────────────────────────────────
+  const vegDistribution = useMemo(() => {
+    let veg = 0;
+    let nonVeg = 0;
+    menuItems.forEach((item) => {
+      if (item.isVeg) veg++;
+      else nonVeg++;
+    });
+    return [
+      { name: "Vegetarian", value: veg, color: "#10b981" },
+      { name: "Non-Vegetarian", value: nonVeg, color: "#ef4444" },
+    ];
+  }, [menuItems]);
+
+  // ── Price summary ──────────────────────────────────────────────────────────
+  const priceStats = useMemo(() => {
+    const prices = menuItems
+      .map((i) => {
+        const raw =
+          typeof i.price === "string"
+            ? parseFloat(i.price.replace(/[^\d.]/g, ""))
+            : Number(i.price);
+        return Number.isFinite(raw) ? raw : null;
+      })
+      .filter((n): n is number => n !== null && n > 0);
+
+    if (prices.length === 0)
+      return { avg: 0, min: 0, max: 0, count: 0 };
+
+    const sum = prices.reduce((a, b) => a + b, 0);
+    return {
+      avg: Math.round(sum / prices.length),
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+      count: prices.length,
+    };
+  }, [menuItems]);
+
+  // ── Price ranges (bar) ─────────────────────────────────────────────────────
+  const priceRanges = useMemo(() => {
+    const buckets = [
+      { name: "₹0–100", min: 0, max: 100, count: 0 },
+      { name: "₹100–250", min: 100, max: 250, count: 0 },
+      { name: "₹250–500", min: 250, max: 500, count: 0 },
+      { name: "₹500–1000", min: 500, max: 1000, count: 0 },
+      { name: "₹1000+", min: 1000, max: Infinity, count: 0 },
+    ];
+    menuItems.forEach((item) => {
+      const raw =
+        typeof item.price === "string"
+          ? parseFloat(item.price.replace(/[^\d.]/g, ""))
+          : Number(item.price);
+      if (!Number.isFinite(raw) || raw <= 0) return;
+      const b = buckets.find((bk) => raw >= bk.min && raw < bk.max);
+      if (b) b.count++;
+    });
+    return buckets;
+  }, [menuItems]);
+
+  // ── Reservations over last 14 days ────────────────────────────────────────
+  const reservationsTrend = useMemo(() => {
+    const days: { date: string; label: string; count: number }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({
+        date: key,
+        label: d.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        count: 0,
+      });
+    }
+    const idx = new Map(days.map((d, i) => [d.date, i]));
+    reservations.forEach((r: any) => {
+      const raw = r.date || r.createdAt;
+      if (!raw) return;
+      const key = new Date(raw).toISOString().slice(0, 10);
+      const i = idx.get(key);
+      if (i !== undefined) days[i].count++;
+    });
+    return days;
+  }, [reservations]);
+
+  // ── New customers per day (last 14 days) ──────────────────────────────────
+  const customersTrend = useMemo(() => {
+    const days: { date: string; label: string; count: number }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({
+        date: key,
+        label: d.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        count: 0,
+      });
+    }
+    const idx = new Map(days.map((d, i) => [d.date, i]));
+    customers.forEach((c: any) => {
+      const raw = c.createdAt;
+      if (!raw) return;
+      const key = new Date(raw).toISOString().slice(0, 10);
+      const i = idx.get(key);
+      if (i !== undefined) days[i].count++;
+    });
+    return days;
+  }, [customers]);
+
+  // ── Recent reservations ────────────────────────────────────────────────────
+  const recentReservations = useMemo(
+    () =>
+      [...reservations]
+        .sort((a: any, b: any) => {
+          const ta = new Date(a.createdAt || a.date || 0).getTime();
+          const tb = new Date(b.createdAt || b.date || 0).getTime();
+          return tb - ta;
+        })
+        .slice(0, 5),
+    [reservations],
+  );
+
+  // ── Active coupons (top) ───────────────────────────────────────────────────
+  const activeCoupons = useMemo(
+    () => (coupons || []).filter((c: any) => c.show !== false).slice(0, 5),
+    [coupons],
+  );
+
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4 pb-2 border-b border-gray-200">
         <div>
-          <h1 className="text-3xl font-black text-gray-900">
-            Dashboard Overview
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            {today}
+          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-1">
+            Analytics Dashboard
           </h1>
-          <p className="text-gray-500 mt-1">
-            Here's what's happening at your restaurant today.
+          <p className="text-sm text-gray-500 mt-0.5">
+            Real-time insights into your restaurant operations.
           </p>
         </div>
         <Button
           variant="outline"
-          size="icon"
-          className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50"
+          size="sm"
+          className="rounded-lg border-gray-300 text-gray-700 hover:bg-gray-50 gap-2"
           onClick={() => refetch()}
           disabled={isFetching}
-          title="Refresh"
           data-testid="button-refresh-overview"
         >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`}
+          />
+          Refresh
         </Button>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {stats.map((s) => (
-          <StatCard key={s.label} {...s} isLoading={isLoading} />
+          <KpiCard key={s.label} {...s} isLoading={isLoading} />
         ))}
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Menu Distribution */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-amber-50 rounded-xl">
-              <LayoutGrid className="w-4 h-4 text-amber-500" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800 text-sm">
-                Menu Distribution
-              </h3>
-              <p className="text-xs text-gray-400">Items per category</p>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart
-              data={menuChartData}
-              margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+      {/* Pricing summary strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <PriceMetric label="Avg. Price" value={`₹${priceStats.avg}`} />
+        <PriceMetric label="Min. Price" value={`₹${priceStats.min}`} />
+        <PriceMetric label="Max. Price" value={`₹${priceStats.max}`} />
+        <PriceMetric
+          label="Items with Price"
+          value={priceStats.count.toString()}
+        />
+      </div>
+
+      {/* Top row of charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Items per category */}
+        <ChartCard
+          className="lg:col-span-2"
+          title="Items per Category"
+          subtitle={`Top ${itemsPerCategory.length} of ${itemsPerCategoryAll.length} categories`}
+          icon={<LayoutGrid className="w-4 h-4 text-amber-600" />}
+        >
+          {itemsPerCategory.length === 0 ? (
+            <EmptyChart label="No menu items yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart
+                data={itemsPerCategory}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f1f5f9"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={0}
+                  angle={-15}
+                  textAnchor="end"
+                  height={50}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0f172a",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontSize: 12,
+                  }}
+                  cursor={{ fill: "rgba(245,158,11,0.06)" }}
+                />
+                <Bar
+                  dataKey="items"
+                  fill="#f59e0b"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={48}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        {/* Veg / Non-veg pie */}
+        <ChartCard
+          title="Diet Mix"
+          subtitle="Vegetarian vs Non-Vegetarian"
+          icon={<Leaf className="w-4 h-4 text-emerald-600" />}
+        >
+          {menuItems.length === 0 ? (
+            <EmptyChart label="No data yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={vegDistribution}
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {vegDistribution.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "#0f172a",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      {/* Trend row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Reservations trend */}
+        <ChartCard
+          title="Reservations"
+          subtitle="Last 14 days"
+          icon={<CalendarCheck className="w-4 h-4 text-indigo-600" />}
+        >
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart
+              data={reservationsTrend}
+              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f1f5f9"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#1e293b",
-                  border: "none",
-                  borderRadius: "10px",
-                  color: "#fff",
-                  fontSize: 12,
-                }}
-                cursor={{ fill: "rgba(245,158,11,0.08)" }}
-              />
-              <Bar dataKey="items" fill="url(#barGrad)" radius={[6, 6, 0, 0]} />
               <defs>
-                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f59e0b" />
-                  <stop offset="100%" stopColor="#fb923c" />
+                <linearGradient id="resvGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-            </BarChart>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f1f5f9"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#64748b" }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "#0f172a",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontSize: 12,
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#6366f1"
+                strokeWidth={2}
+                fill="url(#resvGrad)"
+              />
+            </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
 
-        {/* Customer Visits */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-emerald-50 rounded-xl">
-              <TrendingUp className="w-4 h-4 text-emerald-500" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800 text-sm">
-                Customer Visits
-              </h3>
-              <p className="text-xs text-gray-400">Last 7 days trend</p>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
+        {/* Customers trend */}
+        <ChartCard
+          title="New Customers"
+          subtitle="Last 14 days"
+          icon={<Users className="w-4 h-4 text-sky-600" />}
+        >
+          <ResponsiveContainer width="100%" height={240}>
             <LineChart
-              data={weeklyData}
-              margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+              data={customersTrend}
+              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -611,63 +888,298 @@ function OverviewSection({ rid }: { rid: string }) {
                 vertical={false}
               />
               <XAxis
-                dataKey="day"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
+                dataKey="label"
+                tick={{ fontSize: 11, fill: "#64748b" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
+                tick={{ fontSize: 11, fill: "#64748b" }}
                 axisLine={false}
                 tickLine={false}
+                allowDecimals={false}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#1e293b",
+                  background: "#0f172a",
                   border: "none",
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   color: "#fff",
                   fontSize: 12,
                 }}
-                cursor={{ stroke: "rgba(16,185,129,0.2)", strokeWidth: 2 }}
               />
               <Line
-                dataKey="visits"
-                stroke="#10b981"
+                type="monotone"
+                dataKey="count"
+                stroke="#0ea5e9"
                 strokeWidth={2.5}
-                dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: "#10b981" }}
+                dot={{ r: 3, fill: "#0ea5e9", strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: "#0ea5e9" }}
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-6 text-white">
-        <div className="flex items-center gap-3 mb-2">
-          <Zap className="w-5 h-5" />
-          <h3 className="font-bold text-lg">Quick Actions</h3>
-        </div>
-        <p className="text-white/70 text-sm mb-4">
-          Jump to the most-used sections instantly
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {["menu-items", "coupons", "reservations", "customers"].map((id) => {
-            const sec = SECTIONS.find((s) => s.id === id)!;
-            return (
-              <button
-                key={id}
-                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-colors px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm"
-                onClick={() => {}}
+      {/* Price ranges + Tables row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard
+          title="Price Distribution"
+          subtitle="Items by price range (₹)"
+          icon={<TrendingUp className="w-4 h-4 text-rose-600" />}
+        >
+          {priceStats.count === 0 ? (
+            <EmptyChart label="No priced items yet" />
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart
+                data={priceRanges}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
               >
-                <sec.icon className="w-4 h-4" />
-                {sec.label}
-              </button>
-            );
-          })}
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f1f5f9"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0f172a",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontSize: 12,
+                  }}
+                  cursor={{ fill: "rgba(244,63,94,0.06)" }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="#f43f5e"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={56}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        {/* Active Coupons table */}
+        <ChartCard
+          title="Active Coupons"
+          subtitle={`${activeCoupons.length} of ${coupons.length} shown`}
+          icon={<Tag className="w-4 h-4 text-rose-600" />}
+        >
+          {activeCoupons.length === 0 ? (
+            <EmptyChart label="No active coupons" />
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-gray-100">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                      Code
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                      Discount
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {activeCoupons.map((c: any) => (
+                    <tr
+                      key={c._id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-3 py-2.5 font-mono font-semibold text-gray-900">
+                        {c.code || c.title || "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-700">
+                        {c.discount
+                          ? `${c.discount}${c.discountType === "percent" ? "%" : "₹"}`
+                          : c.description || "—"}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Active
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </ChartCard>
+      </div>
+
+      {/* Recent Reservations table */}
+      <ChartCard
+        title="Recent Reservations"
+        subtitle={`Latest ${recentReservations.length} bookings`}
+        icon={<CalendarCheck className="w-4 h-4 text-indigo-600" />}
+      >
+        {recentReservations.length === 0 ? (
+          <EmptyChart label="No reservations yet" />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Guests
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentReservations.map((r: any) => (
+                  <tr
+                    key={r._id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-3 py-2.5 font-medium text-gray-900">
+                      {r.name || r.customerName || "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-700">
+                      {r.phone || r.contactNumber || r.email || "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-700">
+                      {r.date
+                        ? new Date(r.date).toLocaleDateString()
+                        : r.createdAt
+                          ? new Date(r.createdAt).toLocaleDateString()
+                          : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-700">
+                      {r.time || "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-700">
+                      {r.guests || r.partySize || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </ChartCard>
+    </div>
+  );
+}
+
+// ─── Overview helper components ───────────────────────────────────────────────
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  accent,
+  bg,
+  isLoading,
+}: {
+  label: string;
+  value: number;
+  icon: any;
+  accent: string;
+  bg: string;
+  isLoading?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+          {label}
+        </p>
+        <div className={`p-1.5 rounded-lg ${bg}`}>
+          <Icon className={`w-4 h-4 ${accent}`} />
         </div>
       </div>
+      {isLoading ? (
+        <Skeleton className="h-8 w-16" />
+      ) : (
+        <p className="text-2xl font-bold text-gray-900 tabular-nums">
+          {Number(value).toLocaleString()}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PriceMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-200">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+        {label}
+      </p>
+      <p className="text-xl font-bold text-gray-900 mt-1 tabular-nums">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ChartCard({
+  title,
+  subtitle,
+  icon,
+  className,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`bg-white rounded-xl p-5 border border-gray-200 shadow-sm ${className || ""}`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {icon && <div className="p-1.5 bg-gray-50 rounded-lg">{icon}</div>}
+          <div>
+            <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
+            {subtitle && (
+              <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+            )}
+          </div>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyChart({ label }: { label: string }) {
+  return (
+    <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">
+      {label}
     </div>
   );
 }
