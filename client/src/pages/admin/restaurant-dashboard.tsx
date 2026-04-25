@@ -970,13 +970,13 @@ function CascadingCategoryDropdown({
 
                 {otherHovered && (
                   <div
-                    className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] p-3 min-w-[360px]"
+                    className="absolute left-full top-0 ml-1 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[210] p-3 min-w-[480px]"
                     onMouseEnter={() => setOtherHovered(true)}
                   >
                     <p className="px-1 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                       Other
                     </p>
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="grid grid-cols-4 gap-1">
                       {orphanCollections.map((col) => (
                         <button
                           key={col}
