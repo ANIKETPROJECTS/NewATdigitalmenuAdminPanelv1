@@ -27,23 +27,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  AreaChart,
-  Area,
-} from "recharts";
-import {
   LayoutDashboard,
   UtensilsCrossed,
   LayoutGrid,
@@ -740,327 +723,217 @@ function OverviewSection({ rid }: { rid: string }) {
         </div>
       </div>
 
-      {/* Top row of charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Items per category */}
-        <ChartCard
-          className="lg:col-span-2"
-          title="Items per Category"
-          subtitle={`Top ${itemsPerCategory.length} of ${itemsPerCategoryAll.length} categories`}
-          icon={<LayoutGrid className="w-4 h-4 text-amber-600" />}
-        >
-          {itemsPerCategory.length === 0 ? (
-            <EmptyChart label="No menu items yet" />
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart
-                data={itemsPerCategory}
-                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={0}
-                  angle={-15}
-                  textAnchor="end"
-                  height={50}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "#0f172a",
-                    border: "none",
-                    borderRadius: "8px",
-                    color: "#fff",
-                    fontSize: 12,
-                  }}
-                  cursor={{ fill: "rgba(245,158,11,0.06)" }}
-                />
-                <Bar
-                  dataKey="items"
-                  fill="#f59e0b"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={48}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
-        {/* Veg / Non-veg pie */}
-        <ChartCard
+      {/* Diet Mix + Price Distribution as data rows */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Diet Mix breakdown (data, not chart) */}
+        <DataCard
           title="Diet Mix"
           subtitle="Vegetarian vs Non-Vegetarian"
           icon={<Leaf className="w-4 h-4 text-emerald-600" />}
         >
           {menuItems.length === 0 ? (
-            <EmptyChart label="No data yet" />
+            <EmptyState label="No menu items yet" />
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={vegDistribution}
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {vegDistribution.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "#0f172a",
-                    border: "none",
-                    borderRadius: "8px",
-                    color: "#fff",
-                    fontSize: 12,
-                  }}
-                />
-                <Legend
-                  iconType="circle"
-                  wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="space-y-3">
+              {vegDistribution.map((d) => {
+                const total = vegDistribution.reduce(
+                  (a, b) => a + b.value,
+                  0,
+                );
+                const pct = total ? Math.round((d.value / total) * 100) : 0;
+                return (
+                  <div key={d.name}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: d.color }}
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                          {d.name}
+                        </span>
+                      </div>
+                      <div className="text-sm tabular-nums">
+                        <span className="font-semibold text-gray-900">
+                          {d.value.toLocaleString()}
+                        </span>
+                        <span className="text-gray-500 ml-2">{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: d.color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
-        </ChartCard>
-      </div>
+        </DataCard>
 
-      {/* Trend row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Reservations trend */}
-        <ChartCard
-          title="Reservations"
-          subtitle="Last 14 days"
-          icon={<CalendarCheck className="w-4 h-4 text-indigo-600" />}
-        >
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart
-              data={reservationsTrend}
-              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="resvGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f1f5f9"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "#64748b" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: "#64748b" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#0f172a",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  fontSize: 12,
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#6366f1"
-                strokeWidth={2}
-                fill="url(#resvGrad)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Customers trend */}
-        <ChartCard
-          title="New Customers"
-          subtitle="Last 14 days"
-          icon={<Users className="w-4 h-4 text-sky-600" />}
-        >
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart
-              data={customersTrend}
-              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f1f5f9"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "#64748b" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: "#64748b" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#0f172a",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  fontSize: 12,
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="count"
-                stroke="#0ea5e9"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: "#0ea5e9", strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: "#0ea5e9" }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      {/* Price ranges + Tables row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard
+        {/* Price Distribution (data table) */}
+        <DataCard
           title="Price Distribution"
-          subtitle="Items by price range (₹)"
+          subtitle="Items grouped by price range"
           icon={<TrendingUp className="w-4 h-4 text-rose-600" />}
         >
           {priceStats.count === 0 ? (
-            <EmptyChart label="No priced items yet" />
+            <EmptyState label="No priced items yet" />
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart
-                data={priceRanges}
-                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "#0f172a",
-                    border: "none",
-                    borderRadius: "8px",
-                    color: "#fff",
-                    fontSize: 12,
-                  }}
-                  cursor={{ fill: "rgba(244,63,94,0.06)" }}
-                />
-                <Bar
-                  dataKey="count"
-                  fill="#f43f5e"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={56}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
-        {/* Active Coupons table */}
-        <ChartCard
-          title="Active Coupons"
-          subtitle={`${activeCoupons.length} of ${coupons.length} shown`}
-          icon={<Tag className="w-4 h-4 text-rose-600" />}
-        >
-          {activeCoupons.length === 0 ? (
-            <EmptyChart label="No active coupons" />
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-100">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-                      Code
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-                      Discount
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {activeCoupons.map((c: any) => (
-                    <tr
-                      key={c._id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-3 py-2.5 font-mono font-semibold text-gray-900">
-                        {c.code || c.title || "—"}
-                      </td>
-                      <td className="px-3 py-2.5 text-gray-700">
-                        {c.discount
-                          ? `${c.discount}${c.discountType === "percent" ? "%" : "₹"}`
-                          : c.description || "—"}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Active
+            <div className="space-y-3">
+              {priceRanges.map((r) => {
+                const pct = priceStats.count
+                  ? Math.round((r.count / priceStats.count) * 100)
+                  : 0;
+                return (
+                  <div key={r.name}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-medium text-gray-700">
+                        {r.name}
+                      </span>
+                      <div className="text-sm tabular-nums">
+                        <span className="font-semibold text-gray-900">
+                          {r.count.toLocaleString()}
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <span className="text-gray-500 ml-2">{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-rose-500 transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
-        </ChartCard>
+        </DataCard>
       </div>
 
+      {/* Items per Category as a TABLE */}
+      <DataCard
+        title="Items per Category"
+        subtitle={`Top ${itemsPerCategory.length} of ${itemsPerCategoryAll.length} categories`}
+        icon={<LayoutGrid className="w-4 h-4 text-amber-600" />}
+      >
+        {itemsPerCategory.length === 0 ? (
+          <EmptyState label="No menu items yet" />
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider w-10">
+                    #
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider">
+                    Items
+                  </th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider">
+                    Share
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {itemsPerCategory.map((c, i) => {
+                  const total = menuItems.length || 1;
+                  const pct = Math.round((c.items / total) * 100);
+                  return (
+                    <tr
+                      key={c.name}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-3 py-2.5 text-gray-500 tabular-nums">
+                        {i + 1}
+                      </td>
+                      <td className="px-3 py-2.5 font-medium text-gray-900">
+                        {c.name}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">
+                        {c.items.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-gray-600">
+                        {pct}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DataCard>
+
+      {/* Active Coupons table */}
+      <DataCard
+        title="Active Coupons"
+        subtitle={`${activeCoupons.length} of ${coupons.length} shown`}
+        icon={<Tag className="w-4 h-4 text-rose-600" />}
+      >
+        {activeCoupons.length === 0 ? (
+          <EmptyState label="No active coupons" />
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Discount
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {activeCoupons.map((c: any) => (
+                  <tr
+                    key={c._id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-3 py-2.5 font-mono font-semibold text-gray-900">
+                      {c.code || c.title || "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-700">
+                      {c.discount
+                        ? `${c.discount}${c.discountType === "percent" ? "%" : "₹"}`
+                        : c.description || "—"}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Active
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DataCard>
+
       {/* Recent Reservations table */}
-      <ChartCard
+      <DataCard
         title="Recent Reservations"
         subtitle={`Latest ${recentReservations.length} bookings`}
         icon={<CalendarCheck className="w-4 h-4 text-indigo-600" />}
       >
         {recentReservations.length === 0 ? (
-          <EmptyChart label="No reservations yet" />
+          <EmptyState label="No reservations yet" />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-gray-100">
             <table className="w-full text-sm">
@@ -1114,7 +987,7 @@ function OverviewSection({ rid }: { rid: string }) {
             </table>
           </div>
         )}
-      </ChartCard>
+      </DataCard>
     </div>
   );
 }
@@ -1174,7 +1047,7 @@ function PriceMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ChartCard({
+function DataCard({
   title,
   subtitle,
   icon,
@@ -1189,11 +1062,11 @@ function ChartCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-xl p-5 border border-gray-200 shadow-sm ${className || ""}`}
+      className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${className || ""}`}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/60">
         <div className="flex items-center gap-2">
-          {icon && <div className="p-1.5 bg-gray-50 rounded-lg">{icon}</div>}
+          {icon && <div className="p-1.5 bg-white border border-gray-100 rounded-lg">{icon}</div>}
           <div>
             <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
             {subtitle && (
@@ -1202,14 +1075,14 @@ function ChartCard({
           </div>
         </div>
       </div>
-      {children}
+      <div className="p-5">{children}</div>
     </div>
   );
 }
 
-function EmptyChart({ label }: { label: string }) {
+function EmptyState({ label }: { label: string }) {
   return (
-    <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">
+    <div className="py-10 flex items-center justify-center text-sm text-gray-400">
       {label}
     </div>
   );
