@@ -4398,6 +4398,68 @@ function EmojiPicker({
   );
 }
 
+function PickForm({
+  value,
+  onChange,
+}: {
+  value: any;
+  onChange: (v: any) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <EmojiPicker
+        value={value.icon}
+        onChange={(em) => onChange({ ...value, icon: em })}
+      />
+      <div>
+        <Label>Label *</Label>
+        <Input
+          value={value.label}
+          onChange={(e) => onChange({ ...value, label: e.target.value })}
+          placeholder="e.g. Today's Special"
+          data-testid="input-smartpick-label"
+        />
+      </div>
+      <div>
+        <Label>Tagline</Label>
+        <Input
+          value={value.tagline}
+          onChange={(e) => onChange({ ...value, tagline: e.target.value })}
+          placeholder="e.g. Tried and loved picks for today"
+          data-testid="input-smartpick-tagline"
+        />
+      </div>
+      <div>
+        <Label>Key (slug)</Label>
+        <Input
+          value={value.key}
+          onChange={(e) => onChange({ ...value, key: e.target.value })}
+          placeholder="e.g. todaysSpecial"
+          data-testid="input-smartpick-key"
+        />
+      </div>
+      <div>
+        <Label>Order</Label>
+        <Input
+          type="number"
+          value={value.order}
+          onChange={(e) =>
+            onChange({ ...value, order: parseInt(e.target.value) || 1 })
+          }
+          data-testid="input-smartpick-order"
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={value.isVisible}
+          onCheckedChange={(v) => onChange({ ...value, isVisible: v })}
+        />
+        <Label>Visible</Label>
+      </div>
+    </div>
+  );
+}
+
 function SmartPicksSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -4483,68 +4545,6 @@ function SmartPicksSection({ rid }: { rid: string }) {
     });
     return r;
   }, [picks, search, sortBy, filter]);
-
-  function PickForm({
-    value,
-    onChange,
-  }: {
-    value: any;
-    onChange: (v: any) => void;
-  }) {
-    return (
-      <div className="space-y-3">
-        <EmojiPicker
-          value={value.icon}
-          onChange={(em) => onChange({ ...value, icon: em })}
-        />
-        <div>
-          <Label>Label *</Label>
-          <Input
-            value={value.label}
-            onChange={(e) => onChange({ ...value, label: e.target.value })}
-            placeholder="e.g. Today's Special"
-            data-testid="input-smartpick-label"
-          />
-        </div>
-        <div>
-          <Label>Tagline</Label>
-          <Input
-            value={value.tagline}
-            onChange={(e) => onChange({ ...value, tagline: e.target.value })}
-            placeholder="e.g. Tried and loved picks for today"
-            data-testid="input-smartpick-tagline"
-          />
-        </div>
-        <div>
-          <Label>Key (slug)</Label>
-          <Input
-            value={value.key}
-            onChange={(e) => onChange({ ...value, key: e.target.value })}
-            placeholder="e.g. todaysSpecial"
-            data-testid="input-smartpick-key"
-          />
-        </div>
-        <div>
-          <Label>Order</Label>
-          <Input
-            type="number"
-            value={value.order}
-            onChange={(e) =>
-              onChange({ ...value, order: parseInt(e.target.value) || 1 })
-            }
-            data-testid="input-smartpick-order"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <Switch
-            checked={value.isVisible}
-            onCheckedChange={(v) => onChange({ ...value, isVisible: v })}
-          />
-          <Label>Visible</Label>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) return <LoadRow />;
 
@@ -4814,6 +4814,130 @@ const CAROUSEL_SORT_OPTIONS: { value: CarouselSortBy; label: string }[] = [
   { value: "name-desc", label: "Name (Z-A)" },
 ];
 
+function CarouselForm({
+  rid,
+  form,
+  setForm,
+  uploading,
+  setUploading,
+}: {
+  rid: string;
+  form: any;
+  setForm: React.Dispatch<React.SetStateAction<any>>;
+  uploading: boolean;
+  setUploading: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  const { toast } = useToast();
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch(
+        `/api/restaurant-db/${rid}/upload-image`,
+        {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          body: fd,
+          credentials: "include",
+        },
+      );
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.message || "Upload failed");
+      setForm((p: any) => ({ ...p, url: data.url }));
+      toast({ title: "Image uploaded" });
+    } catch (e: any) {
+      toast({
+        title: "Upload failed",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label>Image *</Label>
+        <div className="mt-1 flex flex-col gap-2">
+          <label
+            className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer text-sm text-gray-600"
+            data-testid="label-carousel-upload"
+          >
+            <ImageIcon className="w-4 h-4 text-gray-400" />
+            <span>{uploading ? "Uploading..." : "Upload from device"}</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              data-testid="input-carousel-file"
+            />
+          </label>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span>OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+          <Input
+            value={form.url}
+            onChange={(e) => setForm((p: any) => ({ ...p, url: e.target.value }))}
+            placeholder="Paste image URL"
+            data-testid="input-carousel-url"
+          />
+        </div>
+      </div>
+      {form.url && (
+        <img
+          src={form.url}
+          alt="preview"
+          className="h-32 w-full object-cover rounded-xl border"
+          onError={(e) => {
+            (e.target as any).style.display = "none";
+          }}
+        />
+      )}
+      <div>
+        <Label>Alt text</Label>
+        <Input
+          value={form.alt}
+          onChange={(e) => setForm((p: any) => ({ ...p, alt: e.target.value }))}
+        />
+      </div>
+      <div>
+        <Label>Order</Label>
+        <Input
+          type="number"
+          value={form.order}
+          onChange={(e) =>
+            setForm((p: any) => ({ ...p, order: parseInt(e.target.value) }))
+          }
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={form.visible}
+          onCheckedChange={(v) => setForm((p: any) => ({ ...p, visible: v }))}
+        />
+        <Label>Visible</Label>
+      </div>
+    </div>
+  );
+}
+
 function CarouselSection({ rid }: { rid: string }) {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
@@ -4902,117 +5026,6 @@ function CarouselSection({ rid }: { rid: string }) {
   }, [items, search, sortBy, visibilityFilter]);
 
   const [uploading, setUploading] = useState(false);
-
-  function CarouselForm() {
-    const handleFile = async (file: File | undefined) => {
-      if (!file) return;
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Invalid file",
-          description: "Please select an image file.",
-          variant: "destructive",
-        });
-        return;
-      }
-      setUploading(true);
-      try {
-        const fd = new FormData();
-        fd.append("image", file);
-        const token = localStorage.getItem("adminToken");
-        const res = await fetch(
-          `/api/restaurant-db/${rid}/upload-image`,
-          {
-            method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-            body: fd,
-            credentials: "include",
-          },
-        );
-        const data = await res.json();
-        if (!res.ok)
-          throw new Error(data.message || "Upload failed");
-        setForm((p) => ({ ...p, url: data.url }));
-        toast({ title: "Image uploaded" });
-      } catch (e: any) {
-        toast({
-          title: "Upload failed",
-          description: e.message,
-          variant: "destructive",
-        });
-      } finally {
-        setUploading(false);
-      }
-    };
-
-    return (
-      <div className="space-y-3">
-        <div>
-          <Label>Image *</Label>
-          <div className="mt-1 flex flex-col gap-2">
-            <label
-              className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer text-sm text-gray-600"
-              data-testid="label-carousel-upload"
-            >
-              <ImageIcon className="w-4 h-4 text-gray-400" />
-              <span>Upload from device</span>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files?.[0])}
-                data-testid="input-carousel-file"
-              />
-            </label>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span>OR</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-            <Input
-              value={form.url}
-              onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
-              placeholder="Paste image URL"
-              data-testid="input-carousel-url"
-            />
-          </div>
-        </div>
-        {form.url && (
-          <img
-            src={form.url}
-            alt="preview"
-            className="h-32 w-full object-cover rounded-xl border"
-            onError={(e) => {
-              (e.target as any).style.display = "none";
-            }}
-          />
-        )}
-        <div>
-          <Label>Alt text</Label>
-          <Input
-            value={form.alt}
-            onChange={(e) => setForm((p) => ({ ...p, alt: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label>Order</Label>
-          <Input
-            type="number"
-            value={form.order}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, order: parseInt(e.target.value) }))
-            }
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <Switch
-            checked={form.visible}
-            onCheckedChange={(v) => setForm((p) => ({ ...p, visible: v }))}
-          />
-          <Label>Visible</Label>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) return <LoadRow />;
 
@@ -5163,7 +5176,13 @@ function CarouselSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle>Add Carousel Image</DialogTitle>
           </DialogHeader>
-          <CarouselForm />
+          <CarouselForm
+            rid={rid}
+            form={form}
+            setForm={setForm}
+            uploading={uploading}
+            setUploading={setUploading}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>
               Cancel
@@ -5183,7 +5202,13 @@ function CarouselSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle>Edit Carousel Image</DialogTitle>
           </DialogHeader>
-          <CarouselForm />
+          <CarouselForm
+            rid={rid}
+            form={form}
+            setForm={setForm}
+            uploading={uploading}
+            setUploading={setUploading}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>
               Cancel
@@ -5244,6 +5269,75 @@ const COUPON_SORT_OPTIONS: { value: CouponSortBy; label: string }[] = [
   { value: "tag-asc", label: "Tag (A-Z)" },
   { value: "tag-desc", label: "Tag (Z-A)" },
 ];
+
+function CouponForm({
+  form,
+  setForm,
+}: {
+  form: any;
+  setForm: React.Dispatch<React.SetStateAction<any>>;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <Label>Code *</Label>
+        <Input
+          value={form.code}
+          onChange={(e) => setForm((p: any) => ({ ...p, code: e.target.value }))}
+        />
+      </div>
+      <div>
+        <Label>Title</Label>
+        <Input
+          value={form.title}
+          onChange={(e) => setForm((p: any) => ({ ...p, title: e.target.value }))}
+        />
+      </div>
+      <div>
+        <Label>Subtitle</Label>
+        <Input
+          value={form.subtitle}
+          onChange={(e) =>
+            setForm((p: any) => ({ ...p, subtitle: e.target.value }))
+          }
+        />
+      </div>
+      <div>
+        <Label>Tag</Label>
+        <Input
+          value={form.tag}
+          onChange={(e) => setForm((p: any) => ({ ...p, tag: e.target.value }))}
+        />
+      </div>
+      <div className="col-span-2">
+        <Label>Description</Label>
+        <Textarea
+          value={form.description}
+          onChange={(e) =>
+            setForm((p: any) => ({ ...p, description: e.target.value }))
+          }
+          rows={2}
+        />
+      </div>
+      <div>
+        <Label>Validity</Label>
+        <Input
+          value={form.validity}
+          onChange={(e) =>
+            setForm((p: any) => ({ ...p, validity: e.target.value }))
+          }
+        />
+      </div>
+      <div className="flex items-center gap-3 self-end">
+        <Switch
+          checked={form.show}
+          onCheckedChange={(v) => setForm((p: any) => ({ ...p, show: v }))}
+        />
+        <Label>Show</Label>
+      </div>
+    </div>
+  );
+}
 
 function CouponsSection({ rid }: { rid: string }) {
   const { toast } = useToast();
@@ -5395,69 +5489,6 @@ function CouponsSection({ rid }: { rid: string }) {
       }),
     onSuccess: () => refetch(),
   });
-
-  function CouponForm() {
-    return (
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Code *</Label>
-          <Input
-            value={form.code}
-            onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label>Title</Label>
-          <Input
-            value={form.title}
-            onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label>Subtitle</Label>
-          <Input
-            value={form.subtitle}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, subtitle: e.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <Label>Tag</Label>
-          <Input
-            value={form.tag}
-            onChange={(e) => setForm((p) => ({ ...p, tag: e.target.value }))}
-          />
-        </div>
-        <div className="col-span-2">
-          <Label>Description</Label>
-          <Textarea
-            value={form.description}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, description: e.target.value }))
-            }
-            rows={2}
-          />
-        </div>
-        <div>
-          <Label>Validity</Label>
-          <Input
-            value={form.validity}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, validity: e.target.value }))
-            }
-          />
-        </div>
-        <div className="flex items-center gap-3 self-end">
-          <Switch
-            checked={form.show}
-            onCheckedChange={(v) => setForm((p) => ({ ...p, show: v }))}
-          />
-          <Label>Show</Label>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) return <LoadRow />;
 
@@ -5675,7 +5706,7 @@ function CouponsSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle>Add Coupon</DialogTitle>
           </DialogHeader>
-          <CouponForm />
+          <CouponForm form={form} setForm={setForm} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>
               Cancel
@@ -5695,7 +5726,7 @@ function CouponsSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle>Edit Coupon</DialogTitle>
           </DialogHeader>
-          <CouponForm />
+          <CouponForm form={form} setForm={setForm} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>
               Cancel
