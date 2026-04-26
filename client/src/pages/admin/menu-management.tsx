@@ -571,7 +571,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-blue-600 text-lg">Loading...</div>
+        <div className="text-primary text-lg">Loading...</div>
       </div>
     );
   }
@@ -584,7 +584,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
           <Button
             variant="outline"
             onClick={() => setLocation("/admin/dashboard")}
-            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            className="border-primary text-primary hover:bg-primary/10 hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
@@ -595,7 +595,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-blue-600 mb-2">Menu Management</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Menu Management</h1>
               <p className="text-gray-600 mb-4 break-words">
                 {restaurant?.name} - Manage menu items and categories
               </p>
@@ -605,7 +605,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                   {categories.map((category) => (
                     <span 
                       key={category} 
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 break-words"
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary break-words"
                     >
                       {category}
                     </span>
@@ -621,7 +621,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                   onClick={() => refreshCategoriesMutation.mutate()}
                   disabled={refreshCategoriesMutation.isPending}
                   variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50 w-full sm:w-auto"
+                  className="border-primary text-primary hover:bg-primary/10 hover:text-primary disabled:opacity-50 w-full sm:w-auto"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${refreshCategoriesMutation.isPending ? 'animate-spin' : ''}`} />
                   <span className="truncate">
@@ -656,7 +656,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                 <DialogTrigger asChild>
                   <Button
                     onClick={resetForm}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full sm:w-auto"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full sm:w-auto"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Menu Item
@@ -664,7 +664,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                 </DialogTrigger>
                 <DialogContent className="bg-white border-gray-200 max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-blue-600">
+                    <DialogTitle className="text-primary">
                       {editingItem ? "Edit Menu Item" : "Add New Menu Item"}
                     </DialogTitle>
                   </DialogHeader>
@@ -676,7 +676,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                           id="name"
                           value={formData.name}
                           onChange={(e) => handleInputChange("name", e.target.value)}
-                          className="bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
+                          className="bg-gray-50 border-gray-200 text-gray-900 focus:border-primary"
                           placeholder="Enter item name"
                           required
                         />
@@ -688,7 +688,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                           type="text"
                           value={formData.price}
                           onChange={(e) => handleInputChange("price", e.target.value)}
-                          className="bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
+                          className="bg-gray-50 border-gray-200 text-gray-900 focus:border-primary"
                           placeholder="Enter price (e.g. 567 or 45 | 76)"
                           required
                         />
@@ -701,7 +701,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                         id="description"
                         value={formData.description}
                         onChange={(e) => handleInputChange("description", e.target.value)}
-                        className="bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 resize-none"
+                        className="bg-gray-50 border-gray-200 text-gray-900 focus:border-primary resize-none"
                         placeholder="Enter item description"
                         rows={3}
                         required
@@ -712,7 +712,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                       <div className="space-y-2">
                         <Label htmlFor="category" className="text-gray-700">Category *</Label>
                         <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                          <SelectTrigger className="bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500">
+                          <SelectTrigger className="bg-gray-50 border-gray-200 text-gray-900 focus:border-primary">
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                           <SelectContent>
@@ -733,14 +733,14 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                             type="file"
                             accept="image/*"
                             onChange={handleImageUpload}
-                            className="bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
+                            className="bg-gray-50 border-gray-200 text-gray-900 focus:border-primary"
                           />
                           <div className="text-center text-gray-500 text-xs">OR</div>
                           <Input
                             type="url"
                             value={formData.image}
                             onChange={(e) => handleInputChange("image", e.target.value)}
-                            className="bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
+                            className="bg-gray-50 border-gray-200 text-gray-900 focus:border-primary"
                             placeholder="Enter image URL"
                             disabled={!!imageFile}
                           />
@@ -817,7 +817,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                       <Button
                         type="submit"
                         disabled={mutation.isPending}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full sm:w-auto"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full sm:w-auto"
                       >
                         {mutation.isPending
                           ? `${editingItem ? "Updating" : "Creating"}...`
@@ -827,7 +827,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                         type="button"
                         variant="outline"
                         onClick={() => handleDialogClose(false)}
-                        className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto"
+                        className="border-primary text-primary hover:bg-primary/10 hover:text-primary w-full sm:w-auto"
                       >
                         Cancel
                       </Button>
@@ -847,7 +847,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
               placeholder="Search items by name, description, or category..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+              className="pl-10 bg-white border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
               data-testid="input-search-menu"
             />
             {searchQuery && (
@@ -870,7 +870,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
               setSortBy(sort as any);
               setSortOrder(order);
             }}>
-              <SelectTrigger className="bg-blue-600 text-white border-blue-600 h-10 w-auto hover:bg-blue-700 px-3" data-testid="select-sort-by">
+              <SelectTrigger className="bg-primary text-primary-foreground border-primary h-10 w-auto hover:bg-primary/90 px-3" data-testid="select-sort-by">
                 <ArrowUpDown className="w-4 h-4 mr-1.5" />
                 <span>Sort</span>
               </SelectTrigger>
@@ -891,7 +891,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
               setFilterVeg(veg as any);
               setFilterAvailable(available as any);
             }}>
-              <SelectTrigger className="bg-blue-600 text-white border-blue-600 h-10 w-auto hover:bg-blue-700 px-3" data-testid="select-filter">
+              <SelectTrigger className="bg-primary text-primary-foreground border-primary h-10 w-auto hover:bg-primary/90 px-3" data-testid="select-filter">
                 <Filter className="w-4 h-4 mr-1.5" />
                 <span>Filter</span>
               </SelectTrigger>
@@ -916,7 +916,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                 setFilterAvailable("all");
                 setSearchQuery("");
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white h-10 px-3"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 px-3"
               data-testid="button-reset"
             >
               <X className="w-4 h-4 mr-1.5" />
@@ -941,7 +941,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
             
             return (
               <div key={category} className="space-y-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-blue-600 flex items-center break-words">
+                <h2 className="text-lg sm:text-xl font-semibold text-primary flex items-center break-words">
                   <Utensils className="w-5 h-5 mr-2 shrink-0" />
                   <span className="truncate">{category}</span>
                   <span className="ml-2 text-sm text-gray-500">({categoryItems.length})</span>
@@ -1004,11 +1004,11 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                         
                         <CardContent className="pt-0">
                           <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center text-blue-600 font-semibold">
+                            <div className="flex items-center text-primary font-semibold">
                               <IndianRupee className="w-4 h-4 mr-1 shrink-0" />
                               <span className="truncate">{item.price}</span>
                             </div>
-                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs truncate max-w-[100px]">
+                            <Badge variant="outline" className="text-primary border-primary text-xs truncate max-w-[100px]">
                               {item.category}
                             </Badge>
                           </div>
@@ -1017,7 +1017,7 @@ else if (restaurant?.mongoUri && menuItems && menuItems.length > 0) {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50 text-xs"
+                              className="flex-1 border-primary text-primary hover:bg-primary/10 hover:text-primary text-xs"
                               onClick={() => handleEdit(item)}
                             >
                               <Edit className="w-4 h-4 mr-1" />

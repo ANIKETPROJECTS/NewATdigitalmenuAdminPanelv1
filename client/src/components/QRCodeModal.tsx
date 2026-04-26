@@ -18,7 +18,7 @@ export default function QRCodeModal({ website, qrCode, restaurantName }: QRCodeM
         <Button
           variant="outline"
           size="sm"
-          className="border-blue-600 text-blue-600 hover:bg-blue-50"
+          className="border-primary text-primary hover:bg-primary/10 hover:text-primary"
         >
           <QrCode className="w-4 h-4 mr-2" />
           QR Code
@@ -46,7 +46,7 @@ export default function QRCodeModal({ website, qrCode, restaurantName }: QRCodeM
                 href={website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm break-all inline-flex items-center"
+                className="text-primary hover:underline text-sm break-all inline-flex items-center"
               >
                 {website}
                 <ExternalLink className="w-3 h-3 ml-1" />
@@ -55,7 +55,7 @@ export default function QRCodeModal({ website, qrCode, restaurantName }: QRCodeM
           </div>
           <Button
             onClick={() => setIsOpen(false)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             Close
           </Button>

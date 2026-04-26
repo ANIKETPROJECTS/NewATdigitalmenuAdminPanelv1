@@ -146,7 +146,7 @@
 //   if (isEditing && isLoading) {
 //     return (
 //       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-//         <div className="text-blue-600 text-lg">Loading...</div>
+//         <div className="text-primary text-lg">Loading...</div>
 //       </div>
 //     );
 //   }
@@ -158,7 +158,7 @@
 //           <Button
 //             variant="outline"
 //             onClick={() => setLocation("/admin/dashboard")}
-//             className="border-blue-600 text-blue-600 hover:bg-blue-50"
+//             className="border-primary text-primary hover:bg-primary/10 hover:text-primary"
 //           >
 //             <ArrowLeft className="w-4 h-4 mr-2" />
 //             Back to Dashboard
@@ -168,9 +168,9 @@
 //         <Card className="bg-white border-gray-200 shadow-sm">
 //           <CardHeader className="px-4 sm:px-6">
 //             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-//               <Store className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
+//               <Store className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
 //               <div className="min-w-0">
-//                 <CardTitle className="text-xl sm:text-2xl text-blue-600 break-words">
+//                 <CardTitle className="text-xl sm:text-2xl text-primary break-words">
 //                   {isEditing ? "Edit Restaurant" : "Add New Restaurant"}
 //                 </CardTitle>
 //                 <CardDescription className="text-sm sm:text-base text-gray-600">
@@ -191,7 +191,7 @@
 //                     type="text"
 //                     value={formData.name}
 //                     onChange={(e) => handleInputChange("name", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter restaurant name"
 //                     required
 //                   />
@@ -205,7 +205,7 @@
 //                     type="email"
 //                     value={formData.email}
 //                     onChange={(e) => handleInputChange("email", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter email address"
 //                     required
 //                   />
@@ -220,7 +220,7 @@
 //                   id="description"
 //                   value={formData.description}
 //                   onChange={(e) => handleInputChange("description", e.target.value)}
-//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500 resize-none"
+//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary resize-none"
 //                   placeholder="Enter restaurant description"
 //                   rows={3}
 //                   required
@@ -236,7 +236,7 @@
 //                     id="address"
 //                     value={formData.address}
 //                     onChange={(e) => handleInputChange("address", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500 resize-none"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary resize-none"
 //                     placeholder="Enter restaurant address"
 //                     rows={2}
 //                     required
@@ -251,7 +251,7 @@
 //                     type="tel"
 //                     value={formData.phone}
 //                     onChange={(e) => handleInputChange("phone", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter phone number"
 //                     required
 //                   />
@@ -267,7 +267,7 @@
 //                   type="url"
 //                   value={formData.website}
 //                   onChange={(e) => handleInputChange("website", e.target.value)}
-//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                   placeholder="https://your-restaurant-website.com"
 //                 />
 //                 <p className="text-xs sm:text-sm text-gray-600">
@@ -285,7 +285,7 @@
 //                     type="file"
 //                     accept="image/*"
 //                     onChange={handleImageUpload}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                   />
 //                   <p className="text-xs sm:text-sm text-gray-600">Or enter image URL:</p>
 //                   <Input
@@ -293,7 +293,7 @@
 //                     type="url"
 //                     value={formData.image}
 //                     onChange={(e) => handleInputChange("image", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter image URL"
 //                   />
 //                   {imagePreview && (
@@ -317,7 +317,7 @@
 //                   type="text"
 //                   value={formData.mongoUri}
 //                   onChange={(e) => handleInputChange("mongoUri", e.target.value)}
-//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                   placeholder="Enter MongoDB connection string to fetch dishes dynamically"
 //                 />
 //                 <p className="text-xs sm:text-sm text-gray-600">
@@ -335,7 +335,7 @@
 //                     type="text"
 //                     value={formData.customTypes}
 //                     onChange={(e) => handleInputChange("customTypes", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Starters,Main Course,Desserts,Beverages"
 //                     required
 //                   />
@@ -346,10 +346,10 @@
 //               )}
               
 //               {formData.mongoUri && (
-//                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+//                 <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 sm:p-4">
 //                   <div className="flex items-center space-x-2">
-//                     <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-//                     <p className="text-xs sm:text-sm font-medium text-blue-800">
+//                     <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
+//                     <p className="text-xs sm:text-sm font-medium text-primary">
 //                       Categories will be automatically extracted from your MongoDB database
 //                     </p>
 //                   </div>
@@ -373,7 +373,7 @@
 //                 <Button
 //                   type="submit"
 //                   disabled={mutation.isPending}
-//                   className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold order-2 sm:order-1"
+//                   className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold order-2 sm:order-1"
 //                 >
 //                   <Save className="w-4 h-4 mr-2" />
 //                   {mutation.isPending
@@ -384,7 +384,7 @@
 //                   type="button"
 //                   variant="outline"
 //                   onClick={() => setLocation("/admin/dashboard")}
-//                   className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 order-1 sm:order-2"
+//                   className="w-full sm:w-auto border-primary text-primary hover:bg-primary/10 hover:text-primary order-1 sm:order-2"
 //                 >
 //                   Cancel
 //                 </Button>
@@ -629,7 +629,7 @@
 //   if (isEditing && isLoading) {
 //     return (
 //       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-//         <div className="text-blue-600 text-lg">Loading...</div>
+//         <div className="text-primary text-lg">Loading...</div>
 //       </div>
 //     );
 //   }
@@ -641,7 +641,7 @@
 //           <Button
 //             variant="outline"
 //             onClick={() => setLocation("/admin/dashboard")}
-//             className="border-blue-600 text-blue-600 hover:bg-blue-50"
+//             className="border-primary text-primary hover:bg-primary/10 hover:text-primary"
 //           >
 //             <ArrowLeft className="w-4 h-4 mr-2" />
 //             Back to Dashboard
@@ -651,9 +651,9 @@
 //         <Card className="bg-white border-gray-200 shadow-sm">
 //           <CardHeader className="px-4 sm:px-6">
 //             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-//               <Store className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
+//               <Store className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
 //               <div className="min-w-0">
-//                 <CardTitle className="text-xl sm:text-2xl text-blue-600 break-words">
+//                 <CardTitle className="text-xl sm:text-2xl text-primary break-words">
 //                   {isEditing ? "Edit Restaurant" : "Add New Restaurant"}
 //                 </CardTitle>
 //                 <CardDescription className="text-sm sm:text-base text-gray-600">
@@ -674,7 +674,7 @@
 //                     type="text"
 //                     value={formData.name}
 //                     onChange={(e) => handleInputChange("name", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter restaurant name"
 //                     required
 //                   />
@@ -688,7 +688,7 @@
 //                     type="email"
 //                     value={formData.email}
 //                     onChange={(e) => handleInputChange("email", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter email address"
 //                     required
 //                   />
@@ -703,7 +703,7 @@
 //                   id="description"
 //                   value={formData.description}
 //                   onChange={(e) => handleInputChange("description", e.target.value)}
-//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500 resize-none"
+//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary resize-none"
 //                   placeholder="Enter restaurant description"
 //                   rows={3}
 //                   required
@@ -719,7 +719,7 @@
 //                     id="address"
 //                     value={formData.address}
 //                     onChange={(e) => handleInputChange("address", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500 resize-none"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary resize-none"
 //                     placeholder="Enter restaurant address"
 //                     rows={2}
 //                     required
@@ -734,7 +734,7 @@
 //                     type="tel"
 //                     value={formData.phone}
 //                     onChange={(e) => handleInputChange("phone", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter phone number"
 //                     required
 //                   />
@@ -750,7 +750,7 @@
 //                   type="url"
 //                   value={formData.website}
 //                   onChange={(e) => handleInputChange("website", e.target.value)}
-//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                   placeholder="https://your-restaurant-website.com"
 //                 />
 //                 <p className="text-xs sm:text-sm text-gray-600">
@@ -769,12 +769,12 @@
 //                       type="file"
 //                       accept="image/*"
 //                       onChange={handleImageUpload}
-//                       className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                       className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                       disabled={isCompressing}
 //                     />
 //                     {isCompressing && (
 //                       <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-//                         <div className="text-sm text-blue-600">Compressing image...</div>
+//                         <div className="text-sm text-primary">Compressing image...</div>
 //                       </div>
 //                     )}
 //                   </div>
@@ -787,7 +787,7 @@
 //                     type="url"
 //                     value={formData.image}
 //                     onChange={(e) => handleInputChange("image", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Enter image URL"
 //                   />
 //                   {imagePreview && (
@@ -811,7 +811,7 @@
 //                   type="text"
 //                   value={formData.mongoUri}
 //                   onChange={(e) => handleInputChange("mongoUri", e.target.value)}
-//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                   className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                   placeholder="Enter MongoDB connection string to fetch dishes dynamically"
 //                 />
 //                 <p className="text-xs sm:text-sm text-gray-600">
@@ -829,7 +829,7 @@
 //                     type="text"
 //                     value={formData.customTypes}
 //                     onChange={(e) => handleInputChange("customTypes", e.target.value)}
-//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+//                     className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
 //                     placeholder="Starters,Main Course,Desserts,Beverages"
 //                     required
 //                   />
@@ -840,10 +840,10 @@
 //               )}
               
 //               {formData.mongoUri && (
-//                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+//                 <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 sm:p-4">
 //                   <div className="flex items-center space-x-2">
-//                     <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-//                     <p className="text-xs sm:text-sm font-medium text-blue-800">
+//                     <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
+//                     <p className="text-xs sm:text-sm font-medium text-primary">
 //                       Categories will be automatically extracted from your MongoDB database
 //                     </p>
 //                   </div>
@@ -867,7 +867,7 @@
 //                 <Button
 //                   type="submit"
 //                   disabled={mutation.isPending || isCompressing}
-//                   className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold order-2 sm:order-1"
+//                   className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold order-2 sm:order-1"
 //                 >
 //                   <Save className="w-4 h-4 mr-2" />
 //                   {mutation.isPending
@@ -878,7 +878,7 @@
 //                   type="button"
 //                   variant="outline"
 //                   onClick={() => setLocation("/admin/dashboard")}
-//                   className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 order-1 sm:order-2"
+//                   className="w-full sm:w-auto border-primary text-primary hover:bg-primary/10 hover:text-primary order-1 sm:order-2"
 //                 >
 //                   Cancel
 //                 </Button>
@@ -1125,7 +1125,7 @@ export default function RestaurantForm() {
   if (isEditing && isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-blue-600 text-lg">Loading...</div>
+        <div className="text-primary text-lg">Loading...</div>
       </div>
     );
   }
@@ -1137,7 +1137,7 @@ export default function RestaurantForm() {
           <Button
             variant="outline"
             onClick={() => setLocation("/admin/dashboard")}
-            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            className="border-primary text-primary hover:bg-primary/10 hover:text-primary"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
@@ -1147,9 +1147,9 @@ export default function RestaurantForm() {
         <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader className="px-4 sm:px-6">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-              <Store className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
+              <Store className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
               <div className="min-w-0">
-                <CardTitle className="text-xl sm:text-2xl text-blue-600 break-words">
+                <CardTitle className="text-xl sm:text-2xl text-primary break-words">
                   {isEditing ? "Edit Restaurant" : "Add New Restaurant"}
                 </CardTitle>
                 <CardDescription className="text-sm sm:text-base text-gray-600">
@@ -1170,7 +1170,7 @@ export default function RestaurantForm() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                     placeholder="Enter restaurant name"
                     required
                   />
@@ -1184,7 +1184,7 @@ export default function RestaurantForm() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                     placeholder="Enter email address"
                     required
                   />
@@ -1199,7 +1199,7 @@ export default function RestaurantForm() {
                   id="description"
                   value={formData.description}
                   onChange={(e) => handleInputChange("description", e.target.value)}
-                  className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                  className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary resize-none"
                   placeholder="Enter restaurant description"
                   rows={3}
                   required
@@ -1215,7 +1215,7 @@ export default function RestaurantForm() {
                     id="address"
                     value={formData.address}
                     onChange={(e) => handleInputChange("address", e.target.value)}
-                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary resize-none"
                     placeholder="Enter restaurant address"
                     rows={2}
                     required
@@ -1230,7 +1230,7 @@ export default function RestaurantForm() {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
-                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                     placeholder="Enter phone number"
                     required
                   />
@@ -1246,7 +1246,7 @@ export default function RestaurantForm() {
                   type="url"
                   value={formData.website}
                   onChange={(e) => handleInputChange("website", e.target.value)}
-                  className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                   placeholder="https://your-restaurant-website.com"
                 />
                 <p className="text-xs sm:text-sm text-gray-600">
@@ -1265,12 +1265,12 @@ export default function RestaurantForm() {
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                       disabled={isCompressing}
                     />
                     {isCompressing && (
                       <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-                        <div className="text-sm text-blue-600">Compressing image...</div>
+                        <div className="text-sm text-primary">Compressing image...</div>
                       </div>
                     )}
                   </div>
@@ -1283,7 +1283,7 @@ export default function RestaurantForm() {
                     type="url"
                     value={formData.image}
                     onChange={(e) => handleInputChange("image", e.target.value)}
-                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                     placeholder="Enter image URL"
                   />
                   {imagePreview && (
@@ -1307,7 +1307,7 @@ export default function RestaurantForm() {
                   type="text"
                   value={formData.mongoUri}
                   onChange={(e) => handleInputChange("mongoUri", e.target.value)}
-                  className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                   placeholder="Enter MongoDB connection string to fetch dishes dynamically"
                 />
                 <p className="text-xs sm:text-sm text-gray-600">
@@ -1316,10 +1316,10 @@ export default function RestaurantForm() {
               </div>
 
               {/* Cloudinary Credentials */}
-              <div className="space-y-4 border border-blue-100 rounded-lg p-4 bg-blue-50">
+              <div className="space-y-4 border border-primary/30 rounded-lg p-4 bg-primary/10">
                 <div>
-                  <h3 className="text-sm font-semibold text-blue-800">Cloudinary Credentials (Optional)</h3>
-                  <p className="text-xs text-blue-600 mt-0.5">
+                  <h3 className="text-sm font-semibold text-primary">Cloudinary Credentials (Optional)</h3>
+                  <p className="text-xs text-primary mt-0.5">
                     Used to upload menu item images from this restaurant's dashboard. Each restaurant uses its own dedicated Cloudinary account.
                   </p>
                 </div>
@@ -1333,7 +1333,7 @@ export default function RestaurantForm() {
                       type="text"
                       value={formData.cloudinaryCloudName}
                       onChange={(e) => handleInputChange("cloudinaryCloudName", e.target.value)}
-                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-blue-500"
+                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-primary"
                       placeholder="e.g. my-cloud-name"
                       data-testid="input-cloudinary-cloud-name"
                     />
@@ -1347,7 +1347,7 @@ export default function RestaurantForm() {
                       type="text"
                       value={formData.cloudinaryApiKey}
                       onChange={(e) => handleInputChange("cloudinaryApiKey", e.target.value)}
-                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-blue-500"
+                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-primary"
                       placeholder="Your Cloudinary API key"
                       data-testid="input-cloudinary-api-key"
                     />
@@ -1361,7 +1361,7 @@ export default function RestaurantForm() {
                       type="password"
                       value={formData.cloudinaryApiSecret}
                       onChange={(e) => handleInputChange("cloudinaryApiSecret", e.target.value)}
-                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-blue-500"
+                      className="w-full bg-white border-gray-200 text-gray-900 focus:border-primary"
                       placeholder="Your Cloudinary API secret"
                       data-testid="input-cloudinary-api-secret"
                     />
@@ -1382,7 +1382,7 @@ export default function RestaurantForm() {
                     type="text"
                     value={formData.customTypes}
                     onChange={(e) => handleInputChange("customTypes", e.target.value)}
-                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full bg-gray-50 border-gray-200 text-gray-900 focus:border-primary focus:ring-primary"
                     placeholder="Starters,Main Course,Desserts,Beverages"
                     required
                   />
@@ -1393,10 +1393,10 @@ export default function RestaurantForm() {
               )}
               
               {formData.mongoUri && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 sm:p-4">
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                    <p className="text-xs sm:text-sm font-medium text-blue-800">
+                    <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
+                    <p className="text-xs sm:text-sm font-medium text-primary">
                       Categories will be automatically extracted from your MongoDB database
                     </p>
                   </div>
@@ -1420,7 +1420,7 @@ export default function RestaurantForm() {
                 <Button
                   type="submit"
                   disabled={mutation.isPending || isCompressing}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold order-2 sm:order-1"
+                  className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold order-2 sm:order-1"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {mutation.isPending
@@ -1431,7 +1431,7 @@ export default function RestaurantForm() {
                   type="button"
                   variant="outline"
                   onClick={() => setLocation("/admin/dashboard")}
-                  className="w-full sm:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 order-1 sm:order-2"
+                  className="w-full sm:w-auto border-primary text-primary hover:bg-primary/10 hover:text-primary order-1 sm:order-2"
                 >
                   Cancel
                 </Button>

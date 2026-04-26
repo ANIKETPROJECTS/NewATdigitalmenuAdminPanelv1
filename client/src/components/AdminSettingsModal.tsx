@@ -518,7 +518,7 @@ export default function AdminSettingsModal({ isOpen, onOpenChange }: AdminSettin
                       key={theme.value}
                       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         themeSettings.colorTheme === theme.value
-                          ? 'border-blue-500 bg-blue-50'
+                          ? 'border-primary bg-primary/10'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                       onClick={() => handleThemeChange(theme.value)}

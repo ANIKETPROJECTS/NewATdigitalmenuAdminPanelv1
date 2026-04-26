@@ -233,7 +233,7 @@ export default function AdminDashboard() {
   if (isLoading || usersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-blue-600 text-lg">Loading...</div>
+        <div className="text-primary text-lg">Loading...</div>
       </div>
     );
   }
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSettingsOpen(true)}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 sm:px-3"
+                  className="border-primary text-primary hover:bg-primary/10 hover:text-primary px-2 sm:px-3"
                 >
                   <Settings className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Settings</span>
@@ -282,7 +282,7 @@ export default function AdminDashboard() {
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 px-2 sm:px-3"
+                  className="border-primary text-primary hover:bg-primary/10 hover:text-primary px-2 sm:px-3"
                 >
                   <LogOut className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Logout</span>
@@ -302,11 +302,11 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-gray-600 text-sm truncate">{isMaster ? 'Total Restaurants' : 'Your Restaurant'}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                  <p className="text-xl sm:text-2xl font-bold text-primary">
                     {restaurants?.length || 0}
                   </p>
                 </div>
-                <Store className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 flex-shrink-0" />
+                <Store className="w-6 h-6 sm:w-8 sm:h-8 text-primary/70 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -317,11 +317,11 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-gray-600 text-sm truncate">Active Restaurants</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                  <p className="text-xl sm:text-2xl font-bold text-primary">
                     {restaurants?.filter((r: any) => r.isActive).length || 0}
                   </p>
                 </div>
-                <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 flex-shrink-0" />
+                <Users className="w-6 h-6 sm:w-8 sm:h-8 text-primary/70 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -332,9 +332,9 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-gray-600 text-sm truncate">Total Items</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600">-</p>
+                  <p className="text-xl sm:text-2xl font-bold text-primary">-</p>
                 </div>
-                <Menu className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 flex-shrink-0" />
+                <Menu className="w-6 h-6 sm:w-8 sm:h-8 text-primary/70 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -348,7 +348,7 @@ export default function AdminDashboard() {
               variant={currentView === 'users' ? 'default' : 'outline'}
               className={`${
                 currentView === 'users'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-primary text-primary-foreground'
                   : 'border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
               data-testid="button-view-users"
@@ -361,7 +361,7 @@ export default function AdminDashboard() {
               variant={currentView === 'restaurants' ? 'default' : 'outline'}
               className={`${
                 currentView === 'restaurants'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-primary text-primary-foreground'
                   : 'border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
               data-testid="button-view-restaurants"
@@ -405,7 +405,7 @@ export default function AdminDashboard() {
                           className={`${
                             user.role === 'master' 
                               ? 'bg-purple-100 text-purple-800' 
-                              : 'bg-blue-100 text-blue-800'
+                              : 'bg-primary/10 text-primary'
                           } flex-shrink-0`}
                         >
                           {user.role === 'master' ? 'Master' : 'Admin'}
@@ -419,7 +419,7 @@ export default function AdminDashboard() {
                           <p className="text-sm text-gray-600">
                             <span className="font-medium">Assigned Restaurant:</span>
                           </p>
-                          <p className="text-sm text-blue-600 truncate">
+                          <p className="text-sm text-primary truncate">
                             {typeof user.assignedRestaurant === 'object' ? user.assignedRestaurant?.name : 'Unknown'}
                           </p>
                         </div>
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditUser(user)}
-                          className="border-blue-600 text-blue-600 hover:bg-blue-50 flex-1"
+                          className="border-primary text-primary hover:bg-primary/10 hover:text-primary flex-1"
                         >
                           <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           Edit
@@ -469,7 +469,7 @@ export default function AdminDashboard() {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="h-8 text-xs border-blue-600 text-blue-600"
+                      className="h-8 text-xs border-primary text-primary"
                       onClick={() => updateAllOtpMutation.mutate(true)}
                       disabled={updateAllOtpMutation.isPending}
                     >
@@ -493,7 +493,7 @@ export default function AdminDashboard() {
                 <Button
                   onClick={() => setUserModalOpen(true)}
                   variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto"
+                  className="border-primary text-primary hover:bg-primary/10 hover:text-primary w-full sm:w-auto"
                   data-testid="button-add-user"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
               {isMaster && (
                 <Button
                   onClick={() => setLocation("/admin/restaurants/new")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full sm:w-auto"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold w-full sm:w-auto"
                   data-testid="button-add-restaurant"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -521,7 +521,7 @@ export default function AdminDashboard() {
                 {isMaster && (
                   <Button
                     onClick={() => setLocation("/admin/restaurants/new")}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Your First Restaurant
@@ -594,7 +594,7 @@ export default function AdminDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={() => setLocation(`/admin/restaurants/${restaurant._id}/edit`)}
-                            className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
+                            className="border-primary text-primary hover:bg-primary/10 hover:text-primary text-xs sm:text-sm"
                           >
                             <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                             Edit
@@ -604,7 +604,7 @@ export default function AdminDashboard() {
                           variant="outline"
                           size="sm"
                           onClick={() => setLocation(`/admin/restaurants/${restaurant._id}/dashboard`)}
-                          className={`border-blue-600 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm ${!isMaster ? 'col-span-2' : ''}`}
+                          className={`border-primary text-primary hover:bg-primary/10 hover:text-primary text-xs sm:text-sm ${!isMaster ? 'col-span-2' : ''}`}
                           data-testid={`button-dashboard-${restaurant._id}`}
                         >
                           <LayoutDashboard className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />

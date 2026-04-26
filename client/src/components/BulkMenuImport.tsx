@@ -161,7 +161,7 @@
 //           <Card>
 //             <CardHeader>
 //               <CardTitle className="text-lg flex items-center gap-2">
-//                 <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+//                 <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
 //                 Download Template
 //               </CardTitle>
 //             </CardHeader>
@@ -184,7 +184,7 @@
 //           <Card>
 //             <CardHeader>
 //               <CardTitle className="text-lg flex items-center gap-2">
-//                 <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
+//                 <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
 //                 Fill Template
 //               </CardTitle>
 //             </CardHeader>
@@ -211,7 +211,7 @@
 //           <Card>
 //             <CardHeader>
 //               <CardTitle className="text-lg flex items-center gap-2">
-//                 <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
+//                 <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
 //                 Upload Filled Template
 //               </CardTitle>
 //             </CardHeader>
@@ -481,7 +481,7 @@ export function BulkMenuImport({ restaurantId, isOpen, onClose, onSuccess }: Bul
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                  <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
                   Download Template
                 </CardTitle>
               </CardHeader>
@@ -505,7 +505,7 @@ export function BulkMenuImport({ restaurantId, isOpen, onClose, onSuccess }: Bul
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                  <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
                   Fill Template
                 </CardTitle>
               </CardHeader>
@@ -538,7 +538,7 @@ export function BulkMenuImport({ restaurantId, isOpen, onClose, onSuccess }: Bul
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                  <span className="bg-primary/10 text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
                   Upload Filled Template
                 </CardTitle>
               </CardHeader>
