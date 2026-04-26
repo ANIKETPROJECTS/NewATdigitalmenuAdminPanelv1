@@ -4469,6 +4469,7 @@ function SmartPicksSection({ rid }: { rid: string }) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SPSortBy>("order-asc");
   const [filter, setFilter] = useState<SPFilter>("all");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const {
     data: picks = [],
@@ -4609,6 +4610,25 @@ function SmartPicksSection({ rid }: { rid: string }) {
             <SelectItem value="hidden">Hidden</SelectItem>
           </SelectContent>
         </Select>
+        {/* View mode toggle */}
+        <div className="flex items-center rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "list" ? "bg-violet-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-smartpick-view-list"
+          >
+            <List className="w-4 h-4" />
+            <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "grid" ? "bg-violet-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-smartpick-view-grid"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span className="hidden sm:inline">Grid</span>
+          </button>
+        </div>
       </div>
 
       {displayed.length === 0 && (
@@ -4622,7 +4642,13 @@ function SmartPicksSection({ rid }: { rid: string }) {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div
+        className={
+          viewMode === "list"
+            ? "space-y-3"
+            : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        }
+      >
         {displayed.map((pick: any, idx: number) => (
           <div
             key={String(pick._id)}
@@ -4950,6 +4976,7 @@ function CarouselSection({ rid }: { rid: string }) {
   const [sortBy, setSortBy] = useState<CarouselSortBy>("order-asc");
   const [visibilityFilter, setVisibilityFilter] =
     useState<CarouselVisibility>("all");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 
   const {
     data: items = [],
@@ -5094,6 +5121,25 @@ function CarouselSection({ rid }: { rid: string }) {
             <SelectItem value="hidden">Hidden</SelectItem>
           </SelectContent>
         </Select>
+        {/* View mode toggle */}
+        <div className="flex items-center rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "list" ? "bg-pink-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-carousel-view-list"
+          >
+            <List className="w-4 h-4" />
+            <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "grid" ? "bg-pink-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-carousel-view-grid"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span className="hidden sm:inline">Grid</span>
+          </button>
+        </div>
       </div>
 
       {filteredItems.length === 0 && (
@@ -5106,23 +5152,96 @@ function CarouselSection({ rid }: { rid: string }) {
           </p>
         </div>
       )}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredItems.map((item: any) => (
-          <div
-            key={String(item._id)}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-all"
-          >
-            <div className="relative">
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredItems.map((item: any) => (
+            <div
+              key={String(item._id)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-all"
+              data-testid={`card-carousel-${item._id}`}
+            >
+              <div className="relative">
+                <img
+                  src={item.url}
+                  alt={item.alt}
+                  className="w-full h-36 object-cover"
+                  onError={(e) => {
+                    (e.target as any).src =
+                      "https://via.placeholder.com/300x150?text=Image";
+                  }}
+                />
+                <div className="absolute top-2 right-2">
+                  <Switch
+                    checked={item.visible}
+                    onCheckedChange={(v) =>
+                      toggleMutation.mutate({ id: String(item._id), visible: v })
+                    }
+                    data-testid={`switch-carousel-${item._id}`}
+                  />
+                </div>
+              </div>
+              <div className="p-3">
+                <p className="text-sm text-gray-600 truncate font-medium">
+                  {item.alt || "No alt"}
+                </p>
+                <p className="text-xs text-gray-400">Order: {item.order}</p>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 h-7 rounded-lg text-xs"
+                    onClick={() => {
+                      setEditItem(item);
+                      setForm({
+                        url: item.url,
+                        alt: item.alt,
+                        order: item.order,
+                        visible: item.visible,
+                      });
+                    }}
+                    data-testid={`button-edit-carousel-${item._id}`}
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 rounded-lg border-red-200 text-red-500 hover:bg-red-50"
+                    onClick={() => setDeleteConfirm(item)}
+                    data-testid={`button-delete-carousel-${item._id}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredItems.map((item: any) => (
+            <div
+              key={String(item._id)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex items-center gap-4 hover:shadow-md transition-all"
+              data-testid={`card-carousel-${item._id}`}
+            >
               <img
                 src={item.url}
                 alt={item.alt}
-                className="w-full h-36 object-cover"
+                className="w-20 h-16 object-cover rounded-xl border flex-shrink-0"
                 onError={(e) => {
                   (e.target as any).src =
-                    "https://via.placeholder.com/300x150?text=Image";
+                    "https://via.placeholder.com/120x80?text=Image";
                 }}
               />
-              <div className="absolute top-2 right-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 truncate">
+                  {item.alt || "No alt"}
+                </p>
+                <p className="text-xs text-gray-400">Order: {item.order}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Switch
                   checked={item.visible}
                   onCheckedChange={(v) =>
@@ -5130,18 +5249,10 @@ function CarouselSection({ rid }: { rid: string }) {
                   }
                   data-testid={`switch-carousel-${item._id}`}
                 />
-              </div>
-            </div>
-            <div className="p-3">
-              <p className="text-sm text-gray-600 truncate font-medium">
-                {item.alt || "No alt"}
-              </p>
-              <p className="text-xs text-gray-400">Order: {item.order}</p>
-              <div className="flex gap-2 mt-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 rounded-lg text-xs"
+                  className="h-7 px-2 rounded-lg text-xs"
                   onClick={() => {
                     setEditItem(item);
                     setForm({
@@ -5153,8 +5264,7 @@ function CarouselSection({ rid }: { rid: string }) {
                   }}
                   data-testid={`button-edit-carousel-${item._id}`}
                 >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Edit
+                  <Edit className="w-3 h-3" />
                 </Button>
                 <Button
                   size="sm"
@@ -5167,9 +5277,9 @@ function CarouselSection({ rid }: { rid: string }) {
                 </Button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
@@ -5361,6 +5471,7 @@ function CouponsSection({ rid }: { rid: string }) {
   >("all");
   const [filterTag, setFilterTag] = useState("all");
   const [sortBy, setSortBy] = useState<CouponSortBy>("code-asc");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 
   const {
     data: coupons = [],
@@ -5603,6 +5714,25 @@ function CouponsSection({ rid }: { rid: string }) {
             Clear
           </Button>
         )}
+        {/* View mode toggle */}
+        <div className="flex items-center rounded-xl border border-gray-200 bg-white overflow-hidden ml-auto">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "list" ? "bg-red-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-coupon-view-list"
+          >
+            <List className="w-4 h-4" />
+            <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${viewMode === "grid" ? "bg-red-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}
+            data-testid="button-coupon-view-grid"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span className="hidden sm:inline">Grid</span>
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 && (
@@ -5622,40 +5752,118 @@ function CouponsSection({ rid }: { rid: string }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((coupon: any) => (
-          <div
-            key={String(coupon._id)}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all"
-            data-testid={`card-coupon-${coupon._id}`}
-          >
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((coupon: any) => (
             <div
-              className={`h-1 bg-gradient-to-r ${coupon.show ? "from-red-400 to-orange-400" : "from-gray-300 to-gray-300"}`}
-            />
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-mono text-xs">
-                      {coupon.code}
-                    </Badge>
-                    {coupon.tag && (
-                      <Badge variant="outline" className="text-xs">
-                        {coupon.tag}
+              key={String(coupon._id)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all"
+              data-testid={`card-coupon-${coupon._id}`}
+            >
+              <div
+                className={`h-1 bg-gradient-to-r ${coupon.show ? "from-red-400 to-orange-400" : "from-gray-300 to-gray-300"}`}
+              />
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-mono text-xs">
+                        {coupon.code}
                       </Badge>
-                    )}
-                    {!coupon.show && (
-                      <Badge className="bg-gray-100 text-gray-500 border-gray-200 text-xs">
-                        Inactive
-                      </Badge>
-                    )}
+                      {coupon.tag && (
+                        <Badge variant="outline" className="text-xs">
+                          {coupon.tag}
+                        </Badge>
+                      )}
+                      {!coupon.show && (
+                        <Badge className="bg-gray-100 text-gray-500 border-gray-200 text-xs">
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="font-bold text-gray-900 mt-2">{coupon.title}</p>
+                    <p className="text-sm text-gray-500">{coupon.subtitle}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {coupon.validity}
+                    </p>
                   </div>
-                  <p className="font-bold text-gray-900 mt-2">{coupon.title}</p>
-                  <p className="text-sm text-gray-500">{coupon.subtitle}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {coupon.validity}
-                  </p>
+                  <Switch
+                    checked={coupon.show}
+                    onCheckedChange={(v) =>
+                      toggleMutation.mutate({ id: String(coupon._id), show: v })
+                    }
+                    data-testid={`switch-coupon-${coupon._id}`}
+                  />
                 </div>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 h-7 rounded-lg text-xs"
+                    onClick={() => {
+                      setEditItem(coupon);
+                      setForm({
+                        code: coupon.code,
+                        title: coupon.title,
+                        subtitle: coupon.subtitle,
+                        description: coupon.description,
+                        validity: coupon.validity,
+                        tag: coupon.tag,
+                        show: coupon.show,
+                      });
+                    }}
+                    data-testid={`button-edit-coupon-${coupon._id}`}
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 rounded-lg border-red-200 text-red-500 hover:bg-red-50"
+                    onClick={() => setDeleteConfirm(coupon)}
+                    data-testid={`button-delete-coupon-${coupon._id}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((coupon: any) => (
+            <div
+              key={String(coupon._id)}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition-all"
+              data-testid={`card-coupon-${coupon._id}`}
+            >
+              <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-mono text-xs flex-shrink-0">
+                {coupon.code}
+              </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-bold text-gray-900 truncate">
+                    {coupon.title}
+                  </p>
+                  {coupon.tag && (
+                    <Badge variant="outline" className="text-xs">
+                      {coupon.tag}
+                    </Badge>
+                  )}
+                  {!coupon.show && (
+                    <Badge className="bg-gray-100 text-gray-500 border-gray-200 text-xs">
+                      Inactive
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 truncate">
+                  {coupon.subtitle}
+                </p>
+                <p className="text-xs text-gray-400">{coupon.validity}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Switch
                   checked={coupon.show}
                   onCheckedChange={(v) =>
@@ -5663,12 +5871,10 @@ function CouponsSection({ rid }: { rid: string }) {
                   }
                   data-testid={`switch-coupon-${coupon._id}`}
                 />
-              </div>
-              <div className="flex gap-2 mt-3">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 rounded-lg text-xs"
+                  className="h-7 px-2 rounded-lg text-xs"
                   onClick={() => {
                     setEditItem(coupon);
                     setForm({
@@ -5683,8 +5889,7 @@ function CouponsSection({ rid }: { rid: string }) {
                   }}
                   data-testid={`button-edit-coupon-${coupon._id}`}
                 >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Edit
+                  <Edit className="w-3 h-3" />
                 </Button>
                 <Button
                   size="sm"
@@ -5697,9 +5902,9 @@ function CouponsSection({ rid }: { rid: string }) {
                 </Button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
