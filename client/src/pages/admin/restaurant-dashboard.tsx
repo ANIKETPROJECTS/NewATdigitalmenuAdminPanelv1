@@ -7981,7 +7981,7 @@ export default function RestaurantDashboard() {
           ${sidebarOpen ? "w-64" : "w-0 md:w-[72px]"} overflow-hidden`}
       >
         {/* Sidebar header */}
-        <div className="flex items-center justify-center border-b border-white/5 flex-shrink-0 bg-white overflow-hidden">
+        <div className="flex items-center justify-center px-2 py-2 border-b border-white/5 flex-shrink-0 bg-white overflow-hidden">
           {sidebarOpen ? (
             <img
               src={atdmLogo}
@@ -7989,7 +7989,7 @@ export default function RestaurantDashboard() {
               loading="eager"
               decoding="async"
               fetchPriority="high"
-              className="w-full h-auto object-contain block"
+              className="w-4/5 h-auto object-contain block"
               data-testid="img-sidebar-logo"
             />
           ) : (
@@ -7999,7 +7999,7 @@ export default function RestaurantDashboard() {
               loading="eager"
               decoding="async"
               fetchPriority="high"
-              className="w-full h-auto object-contain block"
+              className="w-4/5 h-auto object-contain block"
               data-testid="img-sidebar-logo-collapsed"
             />
           )}
