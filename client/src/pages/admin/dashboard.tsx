@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Store, Menu, Users, Crown, LogOut, Edit, Trash2, Settings, UserPlus, LayoutDashboard } from "lucide-react";
 import { useLocation } from "wouter";
+import atdmLogo from "@assets/ATDM_NOBG_1777187399026.png";
 import QRCodeModal from "@/components/QRCodeModal";
 import AdminSettingsModal from "@/components/AdminSettingsModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -244,11 +245,13 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             <div className="flex items-center space-x-3 min-w-0">
-              <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600 truncate">
-                  Airavata Technologies
-                </h1>
+              <img
+                src={atdmLogo}
+                alt="AT Digital Menu"
+                className="h-12 sm:h-14 lg:h-16 w-auto flex-shrink-0 object-contain"
+                data-testid="img-dashboard-logo"
+              />
+              <div className="min-w-0 hidden sm:block">
                 <p className="text-sm sm:text-base text-gray-600 truncate">
                   Restaurant Management System
                 </p>
