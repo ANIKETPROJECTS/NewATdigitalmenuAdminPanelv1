@@ -43,8 +43,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--light-blue-hover', selectedTheme.primary);
       root.style.setProperty('--light-blue-light', selectedTheme.secondary);
       root.style.setProperty('--ring', selectedTheme.primary);
-      root.style.setProperty('--accent', selectedTheme.primary);
-      root.style.setProperty('--accent-foreground', '#ffffff');
       
       // Add theme class to body for global styling
       document.body.className = document.body.className.replace(/theme-\w+/g, '');
