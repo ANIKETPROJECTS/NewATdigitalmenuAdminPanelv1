@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import atdmLogo from "@assets/ATDM_NOBG_1777187399026.png";
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -7983,25 +7984,23 @@ export default function RestaurantDashboard() {
         <div className="flex items-center justify-center px-3 py-5 border-b border-white/5 flex-shrink-0 bg-white">
           {sidebarOpen ? (
             <img
-              src="/digiat-logo.png"
-              alt="DigiAT Menu"
-              width={240}
-              height={96}
+              src={atdmLogo}
+              alt="AT Digital Menu"
               loading="eager"
               decoding="async"
               fetchPriority="high"
               className="h-24 w-auto object-contain"
+              data-testid="img-sidebar-logo"
             />
           ) : (
             <img
-              src="/digiat-logo.png"
-              alt="DigiAT Menu"
-              width={100}
-              height={40}
+              src={atdmLogo}
+              alt="AT Digital Menu"
               loading="eager"
               decoding="async"
               fetchPriority="high"
               className="h-10 w-auto object-contain"
+              data-testid="img-sidebar-logo-collapsed"
             />
           )}
         </div>
