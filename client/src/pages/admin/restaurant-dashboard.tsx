@@ -3197,6 +3197,14 @@ function CategoriesSection({ rid }: { rid: string }) {
   });
   const [drillDelSub, setDrillDelSub] = useState<any | null>(null);
 
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResults, setImportResults] = useState<{
+    imported: string[];
+    skipped: string[];
+    failed: { name: string; reason: string }[];
+  } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
   const {
     data: categories = [],
     isLoading,
@@ -3248,6 +3256,175 @@ function CategoriesSection({ rid }: { rid: string }) {
     onError: (e: any) =>
       toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  function handleExportCategories() {
+    if (!displayed.length) {
+      const hasFilters = filter !== "all" || search;
+      toast({
+        title: "Nothing to export",
+        description: hasFilters
+          ? "No categories match your current filters. Try adjusting or clearing the filters."
+          : "There are no categories to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const rows = displayed.map((cat: any) => ({
+        title: cat.title ?? "",
+        image: cat.image ?? "",
+        order: cat.order ?? 1,
+        visible: cat.visible !== false ? "true" : "false",
+        subcategories: Array.isArray(cat.subcategories) && cat.subcategories.length
+          ? JSON.stringify(cat.subcategories)
+          : "",
+      }));
+
+      const filterParts: string[] = [];
+      if (filter !== "all") filterParts.push(filter);
+      if (search) filterParts.push(search.replace(/\s+/g, "-").toLowerCase());
+      const fileSuffix = filterParts.length ? `-${filterParts.join("-")}` : "";
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Categories");
+      XLSX.writeFile(wb, `categories-export${fileSuffix}-${Date.now()}.xlsx`);
+
+      const hasFilters = filter !== "all" || search;
+      toast({
+        title: "Exported successfully",
+        description: hasFilters
+          ? `${rows.length} filtered categor${rows.length !== 1 ? "ies" : "y"} exported to Excel.`
+          : `All ${rows.length} categor${rows.length !== 1 ? "ies" : "y"} exported to Excel.`,
+      });
+    } catch (e: any) {
+      toast({
+        title: "Export failed",
+        description: e.message || "Could not export categories.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleImportCategoriesFile(file: File) {
+    setImportLoading(true);
+    const importedNames: string[] = [];
+    const skippedNames: string[] = [];
+    const failedItems: { name: string; reason: string }[] = [];
+
+    try {
+      let rows: any[] = [];
+
+      if (file.name.endsWith(".json")) {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        rows = Array.isArray(parsed) ? parsed : [];
+      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        const buffer = await file.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws);
+      } else {
+        toast({
+          title: "Unsupported file",
+          description: "Please upload a .xlsx, .xls, or .json file.",
+          variant: "destructive",
+        });
+        setImportLoading(false);
+        return;
+      }
+
+      if (!rows.length) {
+        toast({
+          title: "Empty file",
+          description: "The file contains no data to import.",
+          variant: "destructive",
+        });
+        setImportLoading(false);
+        return;
+      }
+
+      const existingSet = new Set(
+        categories.map((c: any) =>
+          String(c.title ?? "").toLowerCase().trim(),
+        ),
+      );
+
+      for (const row of rows) {
+        const title = String(row.title ?? row.name ?? "").trim();
+
+        if (!title) {
+          failedItems.push({
+            name: row.title ?? row.name ?? "(unnamed)",
+            reason: "Missing category title.",
+          });
+          continue;
+        }
+
+        const key = title.toLowerCase();
+        if (existingSet.has(key)) {
+          skippedNames.push(title);
+          continue;
+        }
+
+        let subcategories: any[] = [];
+        if (row.subcategories) {
+          if (Array.isArray(row.subcategories)) {
+            subcategories = row.subcategories;
+          } else if (typeof row.subcategories === "string" && row.subcategories.trim()) {
+            try {
+              const parsed = JSON.parse(row.subcategories);
+              if (Array.isArray(parsed)) subcategories = parsed;
+            } catch {
+              subcategories = row.subcategories
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter(Boolean)
+                .map((t: string) => ({ title: t, image: "", visible: true }));
+            }
+          }
+        }
+
+        try {
+          const body = {
+            title,
+            image: String(row.image ?? ""),
+            order: Number(row.order) || 1,
+            visible: String(row.visible ?? "true").toLowerCase() !== "false",
+            subcategories,
+          };
+          await apiRequest(api(rid, "categories"), {
+            method: "POST",
+            body: JSON.stringify(body),
+          });
+          importedNames.push(title);
+          existingSet.add(key);
+        } catch (e: any) {
+          failedItems.push({
+            name: title,
+            reason: e.message || "Server error while saving category.",
+          });
+        }
+      }
+
+      await refetch();
+      setImportResults({
+        imported: importedNames,
+        skipped: skippedNames,
+        failed: failedItems,
+      });
+    } catch (e: any) {
+      toast({
+        title: "Import failed",
+        description:
+          e.message || "Could not read the file. Please check the format.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportLoading(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  }
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {
@@ -3400,19 +3577,55 @@ function CategoriesSection({ rid }: { rid: string }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <SectionTitle>Categories</SectionTitle>
-        <Button
-          onClick={() => {
-            setCatForm(CAT_EMPTY);
-            setAddOpen(true);
-          }}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
-          data-testid="button-add-category"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Category
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,.xls,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImportCategoriesFile(f);
+            }}
+            data-testid="input-import-categories-file"
+          />
+          <Button
+            variant="outline"
+            className="rounded-xl border-gray-200 shadow-sm hover:bg-gray-50"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importLoading}
+            data-testid="button-import-categories"
+          >
+            {importLoading ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <FileUp className="w-4 h-4 mr-2" />
+            )}
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl border-gray-200 shadow-sm hover:bg-gray-50"
+            onClick={handleExportCategories}
+            data-testid="button-export-categories"
+          >
+            <FileDown className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Button
+            onClick={() => {
+              setCatForm(CAT_EMPTY);
+              setAddOpen(true);
+            }}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+            data-testid="button-add-category"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Category
+          </Button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -4197,6 +4410,108 @@ function CategoriesSection({ rid }: { rid: string }) {
               disabled={deleteMutation.isPending}
             >
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Results Dialog */}
+      <Dialog
+        open={!!importResults}
+        onOpenChange={(v) => !v && setImportResults(null)}
+      >
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <FileUp className="w-5 h-5 text-emerald-500" />
+              Import Results
+            </DialogTitle>
+            <DialogDescription>
+              Here's a summary of what happened during the import.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="font-semibold text-emerald-800 text-sm">
+                  {importResults?.imported.length ?? 0} categor
+                  {(importResults?.imported.length ?? 0) !== 1 ? "ies" : "y"}{" "}
+                  imported successfully
+                </span>
+              </div>
+              {(importResults?.imported.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {importResults!.imported.map((name, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <SkipForward className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span className="font-semibold text-amber-800 text-sm">
+                  {importResults?.skipped.length ?? 0} categor
+                  {(importResults?.skipped.length ?? 0) !== 1 ? "ies" : "y"}{" "}
+                  skipped (already exist)
+                </span>
+              </div>
+              {(importResults?.skipped.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {importResults!.skipped.map((name, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {(importResults?.failed.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  <span className="font-semibold text-red-800 text-sm">
+                    {importResults!.failed.length} categor
+                    {importResults!.failed.length !== 1 ? "ies" : "y"} failed to
+                    import
+                  </span>
+                </div>
+                <div className="space-y-2 mt-2">
+                  {importResults!.failed.map((f, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 text-xs bg-red-100 text-red-700 rounded-lg px-3 py-2"
+                    >
+                      <span className="font-semibold flex-shrink-0">
+                        {f.name}:
+                      </span>
+                      <span className="text-red-600">{f.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+              onClick={() => setImportResults(null)}
+              data-testid="button-close-cat-import-results"
+            >
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
