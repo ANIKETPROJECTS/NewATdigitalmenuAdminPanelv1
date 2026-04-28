@@ -2672,26 +2672,61 @@ function MenuItemsSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <FileUp className="w-5 h-5 text-amber-500" />
-              Import Results
+              Import Summary
             </DialogTitle>
             <DialogDescription>
-              Here's a summary of what happened during the import.
+              {(() => {
+                const total =
+                  (importResults?.imported.length ?? 0) +
+                  (importResults?.skipped.length ?? 0) +
+                  (importResults?.failed.length ?? 0);
+                return `Processed ${total} row${total !== 1 ? "s" : ""} from your file.`;
+              })()}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Imported */}
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span className="font-semibold text-emerald-800 text-sm">
-                  {importResults?.imported.length ?? 0} item
-                  {(importResults?.imported.length ?? 0) !== 1 ? "s" : ""}{" "}
-                  imported successfully
-                </span>
+            {/* Stats Summary */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-emerald-700" data-testid="stat-imported-count">
+                  {importResults?.imported.length ?? 0}
+                </div>
+                <div className="text-[11px] font-medium text-emerald-700 uppercase tracking-wide">
+                  Imported
+                </div>
               </div>
-              {(importResults?.imported.length ?? 0) > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+              <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-center">
+                <SkipForward className="w-5 h-5 text-amber-600 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-amber-700" data-testid="stat-duplicates-count">
+                  {importResults?.skipped.length ?? 0}
+                </div>
+                <div className="text-[11px] font-medium text-amber-700 uppercase tracking-wide">
+                  Duplicates
+                </div>
+              </div>
+              <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-center">
+                <AlertCircle className="w-5 h-5 text-red-600 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-red-700" data-testid="stat-failed-count">
+                  {importResults?.failed.length ?? 0}
+                </div>
+                <div className="text-[11px] font-medium text-red-700 uppercase tracking-wide">
+                  Failed
+                </div>
+              </div>
+            </div>
+
+            {/* Imported Details */}
+            {(importResults?.imported.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="font-semibold text-emerald-800 text-xs uppercase tracking-wide">
+                    Imported Successfully
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
                   {importResults!.imported.map((name, i) => (
                     <span
                       key={i}
@@ -2701,21 +2736,19 @@ function MenuItemsSection({ rid }: { rid: string }) {
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Skipped */}
-            <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <SkipForward className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span className="font-semibold text-amber-800 text-sm">
-                  {importResults?.skipped.length ?? 0} item
-                  {(importResults?.skipped.length ?? 0) !== 1 ? "s" : ""}{" "}
-                  skipped (already exist)
-                </span>
               </div>
-              {(importResults?.skipped.length ?? 0) > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+            )}
+
+            {/* Duplicates Details */}
+            {(importResults?.skipped.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <SkipForward className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span className="font-semibold text-amber-800 text-xs uppercase tracking-wide">
+                    Duplicates (Skipped — Already Exist)
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
                   {importResults!.skipped.map((name, i) => (
                     <span
                       key={i}
@@ -2725,21 +2758,19 @@ function MenuItemsSection({ rid }: { rid: string }) {
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Failed */}
+            {/* Failed Details */}
             {(importResults?.failed.length ?? 0) > 0 && (
-              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+              <div className="rounded-xl border border-red-100 bg-red-50/50 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                  <span className="font-semibold text-red-800 text-sm">
-                    {importResults!.failed.length} item
-                    {importResults!.failed.length !== 1 ? "s" : ""} failed to
-                    import
+                  <span className="font-semibold text-red-800 text-xs uppercase tracking-wide">
+                    Failed To Import
                   </span>
                 </div>
-                <div className="space-y-2 mt-2">
+                <div className="space-y-2">
                   {importResults!.failed.map((f, i) => (
                     <div
                       key={i}
@@ -4424,25 +4455,61 @@ function CategoriesSection({ rid }: { rid: string }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <FileUp className="w-5 h-5 text-emerald-500" />
-              Import Results
+              Import Summary
             </DialogTitle>
             <DialogDescription>
-              Here's a summary of what happened during the import.
+              {(() => {
+                const total =
+                  (importResults?.imported.length ?? 0) +
+                  (importResults?.skipped.length ?? 0) +
+                  (importResults?.failed.length ?? 0);
+                return `Processed ${total} row${total !== 1 ? "s" : ""} from your file.`;
+              })()}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span className="font-semibold text-emerald-800 text-sm">
-                  {importResults?.imported.length ?? 0} categor
-                  {(importResults?.imported.length ?? 0) !== 1 ? "ies" : "y"}{" "}
-                  imported successfully
-                </span>
+            {/* Stats Summary */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-emerald-700" data-testid="stat-cat-imported-count">
+                  {importResults?.imported.length ?? 0}
+                </div>
+                <div className="text-[11px] font-medium text-emerald-700 uppercase tracking-wide">
+                  Imported
+                </div>
               </div>
-              {(importResults?.imported.length ?? 0) > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+              <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-center">
+                <SkipForward className="w-5 h-5 text-amber-600 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-amber-700" data-testid="stat-cat-duplicates-count">
+                  {importResults?.skipped.length ?? 0}
+                </div>
+                <div className="text-[11px] font-medium text-amber-700 uppercase tracking-wide">
+                  Duplicates
+                </div>
+              </div>
+              <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-center">
+                <AlertCircle className="w-5 h-5 text-red-600 mx-auto mb-1" />
+                <div className="text-2xl font-bold text-red-700" data-testid="stat-cat-failed-count">
+                  {importResults?.failed.length ?? 0}
+                </div>
+                <div className="text-[11px] font-medium text-red-700 uppercase tracking-wide">
+                  Failed
+                </div>
+              </div>
+            </div>
+
+            {/* Imported Details */}
+            {(importResults?.imported.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="font-semibold text-emerald-800 text-xs uppercase tracking-wide">
+                    Imported Successfully
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
                   {importResults!.imported.map((name, i) => (
                     <span
                       key={i}
@@ -4452,20 +4519,19 @@ function CategoriesSection({ rid }: { rid: string }) {
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <SkipForward className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span className="font-semibold text-amber-800 text-sm">
-                  {importResults?.skipped.length ?? 0} categor
-                  {(importResults?.skipped.length ?? 0) !== 1 ? "ies" : "y"}{" "}
-                  skipped (already exist)
-                </span>
               </div>
-              {(importResults?.skipped.length ?? 0) > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+            )}
+
+            {/* Duplicates Details */}
+            {(importResults?.skipped.length ?? 0) > 0 && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <SkipForward className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span className="font-semibold text-amber-800 text-xs uppercase tracking-wide">
+                    Duplicates (Skipped — Already Exist)
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
                   {importResults!.skipped.map((name, i) => (
                     <span
                       key={i}
@@ -4475,20 +4541,19 @@ function CategoriesSection({ rid }: { rid: string }) {
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
+            {/* Failed Details */}
             {(importResults?.failed.length ?? 0) > 0 && (
-              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+              <div className="rounded-xl border border-red-100 bg-red-50/50 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                  <span className="font-semibold text-red-800 text-sm">
-                    {importResults!.failed.length} categor
-                    {importResults!.failed.length !== 1 ? "ies" : "y"} failed to
-                    import
+                  <span className="font-semibold text-red-800 text-xs uppercase tracking-wide">
+                    Failed To Import
                   </span>
                 </div>
-                <div className="space-y-2 mt-2">
+                <div className="space-y-2">
                   {importResults!.failed.map((f, i) => (
                     <div
                       key={i}
