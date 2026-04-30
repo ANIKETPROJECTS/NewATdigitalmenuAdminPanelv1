@@ -48,6 +48,21 @@ function toObjectId(id: string) {
   try { return new ObjectId(id); } catch { return id; }
 }
 
+// Mongo filter: item is active today.
+// Treat missing/empty/invalid `activeDays` as "every day" so existing rows
+// keep working without migration.
+function activeTodayFilter() {
+  const today = new Date().getDay(); // 0 (Sun) .. 6 (Sat)
+  return {
+    $or: [
+      { activeDays: { $exists: false } },
+      { activeDays: null },
+      { activeDays: { $size: 0 } },
+      { activeDays: today },
+    ],
+  };
+}
+
 // ── Overview ──────────────────────────────────────────────────────────────────
 router.get('/:restaurantId/overview', authenticateAdmin, async (req, res) => {
   try {
@@ -58,7 +73,7 @@ router.get('/:restaurantId/overview', authenticateAdmin, async (req, res) => {
       menuDbName ? client.db(menuDbName).listCollections().toArray() : Promise.resolve([]),
       client.db('customersdb').collection('customers').countDocuments(),
       client.db('hamburger').collection('reservation').countDocuments(),
-      client.db('menupage').collection('coupons').countDocuments({ show: true }),
+      client.db('menupage').collection('coupons').countDocuments({ $and: [{ show: true }, activeTodayFilter()] }),
       client.db('menupage').collection('categories').countDocuments(),
     ]);
 
@@ -267,7 +282,8 @@ router.delete('/:restaurantId/smart-picks/:id', authenticateAdmin, async (req, r
 router.get('/:restaurantId/carousel', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
-    const items = await client.db('menupage').collection('carousel').find({}).sort({ order: 1 }).toArray();
+    const filter: any = req.query.onlyActiveToday === '1' ? activeTodayFilter() : {};
+    const items = await client.db('menupage').collection('carousel').find(filter).sort({ order: 1 }).toArray();
     res.json(items);
   } catch (err: any) {
     res.status(err.status || 500).json({ message: err.message });
@@ -312,7 +328,10 @@ router.delete('/:restaurantId/carousel/:id', authenticateAdmin, async (req, res)
 router.get('/:restaurantId/coupons', authenticateAdmin, async (req, res) => {
   try {
     const { client } = await getRestaurantClient(req.params.restaurantId);
-    const coupons = await client.db('menupage').collection('coupons').find({}).toArray();
+    const filter: any = req.query.onlyActiveToday === '1'
+      ? { $and: [{ show: true }, activeTodayFilter()] }
+      : {};
+    const coupons = await client.db('menupage').collection('coupons').find(filter).toArray();
     res.json(coupons);
   } catch (err: any) {
     res.status(err.status || 500).json({ message: err.message });

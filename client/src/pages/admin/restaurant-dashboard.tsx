@@ -5221,6 +5221,81 @@ const CAROUSEL_SORT_OPTIONS: { value: CarouselSortBy; label: string }[] = [
   { value: "name-desc", label: "Name (Z-A)" },
 ];
 
+// ── Day-of-week helpers (shared by Coupons & Carousel) ───────────────────────
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+function normalizeDays(d: any): number[] {
+  if (!Array.isArray(d)) return [...ALL_DAYS];
+  const cleaned = d
+    .map((x) => Number(x))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  return cleaned.length ? Array.from(new Set(cleaned)).sort() : [...ALL_DAYS];
+}
+
+function isActiveToday(activeDays: any): boolean {
+  const days = normalizeDays(activeDays);
+  return days.includes(new Date().getDay());
+}
+
+function DayPicker({
+  value,
+  onChange,
+  testIdPrefix,
+}: {
+  value: number[];
+  onChange: (days: number[]) => void;
+  testIdPrefix: string;
+}) {
+  const selected = new Set(normalizeDays(value));
+  const toggle = (d: number) => {
+    const next = new Set(selected);
+    if (next.has(d)) next.delete(d);
+    else next.add(d);
+    onChange(Array.from(next).sort());
+  };
+  const allSelected = selected.size === 7;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <Label className="text-sm">Active days</Label>
+        <button
+          type="button"
+          className="text-xs text-gray-500 hover:text-gray-700 underline"
+          onClick={() => onChange(allSelected ? [] : [...ALL_DAYS])}
+          data-testid={`${testIdPrefix}-toggle-all-days`}
+        >
+          {allSelected ? "Clear all" : "Select all"}
+        </button>
+      </div>
+      <div className="flex gap-1.5 flex-wrap">
+        {DAY_LABELS.map((label, i) => {
+          const active = selected.has(i);
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => toggle(i)}
+              className={
+                "px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors " +
+                (active
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-400")
+              }
+              data-testid={`${testIdPrefix}-day-${i}`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-gray-400 mt-1.5">
+        Item will be hidden from customers on days that aren't selected.
+      </p>
+    </div>
+  );
+}
+
 function CarouselForm({
   rid,
   form,
@@ -5341,6 +5416,11 @@ function CarouselForm({
         />
         <Label>Visible</Label>
       </div>
+      <DayPicker
+        value={form.activeDays}
+        onChange={(days) => setForm((p: any) => ({ ...p, activeDays: days }))}
+        testIdPrefix="carousel"
+      />
     </div>
   );
 }
@@ -5350,7 +5430,13 @@ function CarouselSection({ rid }: { rid: string }) {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
-  const emptyForm = { url: "", alt: "", order: 1, visible: true };
+  const emptyForm = {
+    url: "",
+    alt: "",
+    order: 1,
+    visible: true,
+    activeDays: [...ALL_DAYS],
+  };
   const [form, setForm] = useState(emptyForm);
 
   const [search, setSearch] = useState("");
@@ -5565,7 +5651,17 @@ function CarouselSection({ rid }: { rid: string }) {
                 <p className="text-sm text-gray-600 truncate font-medium">
                   {item.alt || "No alt"}
                 </p>
-                <p className="text-xs text-gray-400">Order: {item.order}</p>
+                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  <p className="text-xs text-gray-400">Order: {item.order}</p>
+                  {!isActiveToday(item.activeDays) && (
+                    <Badge
+                      className="bg-gray-100 text-gray-500 border-gray-200 text-[10px] px-1.5 py-0"
+                      data-testid={`badge-carousel-inactive-today-${item._id}`}
+                    >
+                      Inactive today
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2 mt-2">
                   <Button
                     size="sm"
@@ -5578,6 +5674,7 @@ function CarouselSection({ rid }: { rid: string }) {
                         alt: item.alt,
                         order: item.order,
                         visible: item.visible,
+                        activeDays: normalizeDays(item.activeDays),
                       });
                     }}
                     data-testid={`button-edit-carousel-${item._id}`}
@@ -5620,7 +5717,17 @@ function CarouselSection({ rid }: { rid: string }) {
                 <p className="font-semibold text-gray-900 truncate">
                   {item.alt || "No alt"}
                 </p>
-                <p className="text-xs text-gray-400">Order: {item.order}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-gray-400">Order: {item.order}</p>
+                  {!isActiveToday(item.activeDays) && (
+                    <Badge
+                      className="bg-gray-100 text-gray-500 border-gray-200 text-[10px] px-1.5 py-0"
+                      data-testid={`badge-carousel-inactive-today-${item._id}`}
+                    >
+                      Inactive today
+                    </Badge>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Switch
@@ -5641,6 +5748,7 @@ function CarouselSection({ rid }: { rid: string }) {
                       alt: item.alt,
                       order: item.order,
                       visible: item.visible,
+                      activeDays: normalizeDays(item.activeDays),
                     });
                   }}
                   data-testid={`button-edit-carousel-${item._id}`}
@@ -5826,6 +5934,13 @@ function CouponForm({
         />
         <Label>Show</Label>
       </div>
+      <div className="col-span-2">
+        <DayPicker
+          value={form.activeDays}
+          onChange={(days) => setForm((p: any) => ({ ...p, activeDays: days }))}
+          testIdPrefix="coupon"
+        />
+      </div>
     </div>
   );
 }
@@ -5843,6 +5958,7 @@ function CouponsSection({ rid }: { rid: string }) {
     validity: "",
     tag: "",
     show: true,
+    activeDays: [...ALL_DAYS],
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -6161,6 +6277,14 @@ function CouponsSection({ rid }: { rid: string }) {
                           Inactive
                         </Badge>
                       )}
+                      {coupon.show && !isActiveToday(coupon.activeDays) && (
+                        <Badge
+                          className="bg-amber-50 text-amber-700 border-amber-200 text-xs"
+                          data-testid={`badge-coupon-inactive-today-${coupon._id}`}
+                        >
+                          Inactive today
+                        </Badge>
+                      )}
                     </div>
                     <p className="font-bold text-gray-900 mt-2">{coupon.title}</p>
                     <p className="text-sm text-gray-500">{coupon.subtitle}</p>
@@ -6191,6 +6315,7 @@ function CouponsSection({ rid }: { rid: string }) {
                         validity: coupon.validity,
                         tag: coupon.tag,
                         show: coupon.show,
+                        activeDays: normalizeDays(coupon.activeDays),
                       });
                     }}
                     data-testid={`button-edit-coupon-${coupon._id}`}
@@ -6238,6 +6363,14 @@ function CouponsSection({ rid }: { rid: string }) {
                       Inactive
                     </Badge>
                   )}
+                  {coupon.show && !isActiveToday(coupon.activeDays) && (
+                    <Badge
+                      className="bg-amber-50 text-amber-700 border-amber-200 text-xs"
+                      data-testid={`badge-coupon-inactive-today-${coupon._id}`}
+                    >
+                      Inactive today
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-gray-500 truncate">
                   {coupon.subtitle}
@@ -6266,6 +6399,7 @@ function CouponsSection({ rid }: { rid: string }) {
                       validity: coupon.validity,
                       tag: coupon.tag,
                       show: coupon.show,
+                      activeDays: normalizeDays(coupon.activeDays),
                     });
                   }}
                   data-testid={`button-edit-coupon-${coupon._id}`}
