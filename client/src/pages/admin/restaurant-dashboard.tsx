@@ -5640,7 +5640,6 @@ function CarouselSection({ rid }: { rid: string }) {
                 <div className="absolute top-2 right-2">
                   <Switch
                     checked={isActiveToday(item.activeDays) && item.visible}
-                    disabled={!isActiveToday(item.activeDays)}
                     onCheckedChange={(v) =>
                       toggleMutation.mutate({ id: String(item._id), visible: v })
                     }
@@ -5733,7 +5732,6 @@ function CarouselSection({ rid }: { rid: string }) {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Switch
                   checked={isActiveToday(item.activeDays) && item.visible}
-                  disabled={!isActiveToday(item.activeDays)}
                   onCheckedChange={(v) =>
                     toggleMutation.mutate({ id: String(item._id), visible: v })
                   }
@@ -6296,7 +6294,6 @@ function CouponsSection({ rid }: { rid: string }) {
                   </div>
                   <Switch
                     checked={isActiveToday(coupon.activeDays) && coupon.show}
-                    disabled={!isActiveToday(coupon.activeDays)}
                     onCheckedChange={(v) =>
                       toggleMutation.mutate({ id: String(coupon._id), show: v })
                     }
@@ -6383,7 +6380,6 @@ function CouponsSection({ rid }: { rid: string }) {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Switch
                   checked={isActiveToday(coupon.activeDays) && coupon.show}
-                  disabled={!isActiveToday(coupon.activeDays)}
                   onCheckedChange={(v) =>
                     toggleMutation.mutate({ id: String(coupon._id), show: v })
                   }
