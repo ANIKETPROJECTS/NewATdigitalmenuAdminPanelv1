@@ -5238,6 +5238,13 @@ function isActiveToday(activeDays: any): boolean {
   return days.includes(new Date().getDay());
 }
 
+function ensureTodayInDays(activeDays: any): number[] {
+  const days = normalizeDays(activeDays);
+  const today = new Date().getDay();
+  if (days.includes(today)) return days;
+  return Array.from(new Set([...days, today])).sort();
+}
+
 function DayPicker({
   value,
   onChange,
@@ -5411,8 +5418,14 @@ function CarouselForm({
       </div>
       <div className="flex items-center gap-3">
         <Switch
-          checked={form.visible}
-          onCheckedChange={(v) => setForm((p: any) => ({ ...p, visible: v }))}
+          checked={isActiveToday(form.activeDays) && form.visible}
+          onCheckedChange={(v) =>
+            setForm((p: any) => ({
+              ...p,
+              visible: v,
+              activeDays: v ? ensureTodayInDays(p.activeDays) : normalizeDays(p.activeDays),
+            }))
+          }
         />
         <Label>Visible</Label>
       </div>
@@ -5489,10 +5502,10 @@ function CarouselSection({ rid }: { rid: string }) {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, visible }: { id: string; visible: boolean }) =>
+    mutationFn: ({ id, ...patch }: { id: string; visible?: boolean; activeDays?: number[] }) =>
       apiRequest(`${api(rid, "carousel")}/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ visible }),
+        body: JSON.stringify(patch),
       }),
     onSuccess: () => refetch(),
   });
@@ -5641,7 +5654,13 @@ function CarouselSection({ rid }: { rid: string }) {
                   <Switch
                     checked={isActiveToday(item.activeDays) && item.visible}
                     onCheckedChange={(v) =>
-                      toggleMutation.mutate({ id: String(item._id), visible: v })
+                      toggleMutation.mutate({
+                        id: String(item._id),
+                        visible: v,
+                        activeDays: v
+                          ? ensureTodayInDays(item.activeDays)
+                          : normalizeDays(item.activeDays),
+                      })
                     }
                     data-testid={`switch-carousel-${item._id}`}
                   />
@@ -5733,7 +5752,13 @@ function CarouselSection({ rid }: { rid: string }) {
                 <Switch
                   checked={isActiveToday(item.activeDays) && item.visible}
                   onCheckedChange={(v) =>
-                    toggleMutation.mutate({ id: String(item._id), visible: v })
+                    toggleMutation.mutate({
+                      id: String(item._id),
+                      visible: v,
+                      activeDays: v
+                        ? ensureTodayInDays(item.activeDays)
+                        : normalizeDays(item.activeDays),
+                    })
                   }
                   data-testid={`switch-carousel-${item._id}`}
                 />
@@ -5929,8 +5954,14 @@ function CouponForm({
       </div>
       <div className="flex items-center gap-3 self-end">
         <Switch
-          checked={form.show}
-          onCheckedChange={(v) => setForm((p: any) => ({ ...p, show: v }))}
+          checked={isActiveToday(form.activeDays) && form.show}
+          onCheckedChange={(v) =>
+            setForm((p: any) => ({
+              ...p,
+              show: v,
+              activeDays: v ? ensureTodayInDays(p.activeDays) : normalizeDays(p.activeDays),
+            }))
+          }
         />
         <Label>Show</Label>
       </div>
@@ -6090,10 +6121,10 @@ function CouponsSection({ rid }: { rid: string }) {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, show }: { id: string; show: boolean }) =>
+    mutationFn: ({ id, ...patch }: { id: string; show?: boolean; activeDays?: number[] }) =>
       apiRequest(`${api(rid, "coupons")}/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ show }),
+        body: JSON.stringify(patch),
       }),
     onSuccess: () => refetch(),
   });
@@ -6295,7 +6326,13 @@ function CouponsSection({ rid }: { rid: string }) {
                   <Switch
                     checked={isActiveToday(coupon.activeDays) && coupon.show}
                     onCheckedChange={(v) =>
-                      toggleMutation.mutate({ id: String(coupon._id), show: v })
+                      toggleMutation.mutate({
+                        id: String(coupon._id),
+                        show: v,
+                        activeDays: v
+                          ? ensureTodayInDays(coupon.activeDays)
+                          : normalizeDays(coupon.activeDays),
+                      })
                     }
                     data-testid={`switch-coupon-${coupon._id}`}
                   />
@@ -6381,7 +6418,13 @@ function CouponsSection({ rid }: { rid: string }) {
                 <Switch
                   checked={isActiveToday(coupon.activeDays) && coupon.show}
                   onCheckedChange={(v) =>
-                    toggleMutation.mutate({ id: String(coupon._id), show: v })
+                    toggleMutation.mutate({
+                      id: String(coupon._id),
+                      show: v,
+                      activeDays: v
+                        ? ensureTodayInDays(coupon.activeDays)
+                        : normalizeDays(coupon.activeDays),
+                    })
                   }
                   data-testid={`switch-coupon-${coupon._id}`}
                 />
