@@ -49,16 +49,39 @@ function toObjectId(id: string) {
 }
 
 // Mongo filter: item is active today.
-// Treat missing/empty/invalid `activeDays` as "every day" so existing rows
-// keep working without migration.
+// Treat missing/empty/invalid `activeDays` as "every day" and missing
+// startDate/endDate as "no calendar limit" so existing rows keep working
+// without migration.
 function activeTodayFilter() {
   const today = new Date().getDay(); // 0 (Sun) .. 6 (Sat)
+  const d = new Date();
+  const isoToday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   return {
-    $or: [
-      { activeDays: { $exists: false } },
-      { activeDays: null },
-      { activeDays: { $size: 0 } },
-      { activeDays: today },
+    $and: [
+      {
+        $or: [
+          { activeDays: { $exists: false } },
+          { activeDays: null },
+          { activeDays: { $size: 0 } },
+          { activeDays: today },
+        ],
+      },
+      {
+        $or: [
+          { startDate: { $exists: false } },
+          { startDate: null },
+          { startDate: '' },
+          { startDate: { $lte: isoToday } },
+        ],
+      },
+      {
+        $or: [
+          { endDate: { $exists: false } },
+          { endDate: null },
+          { endDate: '' },
+          { endDate: { $gte: isoToday } },
+        ],
+      },
     ],
   };
 }
