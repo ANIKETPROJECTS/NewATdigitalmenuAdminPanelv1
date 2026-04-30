@@ -5871,7 +5871,7 @@ function CarouselSection({ rid }: { rid: string }) {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Carousel Image</DialogTitle>
           </DialogHeader>
@@ -5897,7 +5897,7 @@ function CarouselSection({ rid }: { rid: string }) {
         </DialogContent>
       </Dialog>
       <Dialog open={!!editItem} onOpenChange={(v) => !v && setEditItem(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Carousel Image</DialogTitle>
           </DialogHeader>
@@ -6571,7 +6571,7 @@ function CouponsSection({ rid }: { rid: string }) {
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Coupon</DialogTitle>
           </DialogHeader>
@@ -6591,7 +6591,7 @@ function CouponsSection({ rid }: { rid: string }) {
         </DialogContent>
       </Dialog>
       <Dialog open={!!editItem} onOpenChange={(v) => !v && setEditItem(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Coupon</DialogTitle>
           </DialogHeader>
